@@ -1,22 +1,20 @@
-#ifndef SPACESHIP_H
-#define SPACESHIP_H
+#ifndef ALIEN_H
+#define ALIEN_H
 
 #include <SFML/Graphics.hpp>
 
 #include "BulletManager.h"
 
-class Spaceship final : public sf::Drawable
+class Alien final : public sf::Drawable
 {
-    const sf::Texture texture;
     sf::Sprite sprite;
-    const float speed;
+    float speed;
 
     public:
-        Spaceship(const std::filesystem::path &filename,
-                  const float speed,
-                  const float scale,
-                  const sf::Vector2f &pos) : texture(filename), sprite(texture), speed(speed)
-
+        Alien(const sf::Texture &texture,
+              const float speed,
+              const float scale,
+              const sf::Vector2f &pos) : sprite(texture), speed(speed)
         {
             //Set origin to center
             sprite.setOrigin({
@@ -27,6 +25,17 @@ class Spaceship final : public sf::Drawable
 
             sprite.setPosition(pos);
         }
+
+        // explicit Alien(Alien &&other) noexcept : sprite(other.sprite), speed(other.speed)
+        // {
+        // }
+
+        // Alien &operator=(Alien other)
+        // {
+        //     std::swap(sprite, other.sprite);
+        //     std::swap(speed, other.speed);
+        //     return *this;
+        // }
 
         void draw(sf::RenderTarget &target, const sf::RenderStates states) const override
         {
@@ -40,14 +49,18 @@ class Spaceship final : public sf::Drawable
 
         void move_right()
         {
-            // std::cout << "(" << sprite.getOrigin().x << ", " << sprite.getOrigin().y << ")\n";
             sprite.move({speed, 0.0f});
         }
 
         void shoot(BulletManager &bullet_manager) const
         {
-            bullet_manager.addBullet(sprite.getPosition(), BulletType::Player);
+            bullet_manager.addBullet(sprite.getPosition(), BulletType::Enemy);
+        }
+
+        [[nodiscard]] sf::Vector2f getPosition() const
+        {
+            return sprite.getPosition();
         }
 };
 
-#endif //SPACESHIP_H
+#endif //ALIEN_H
