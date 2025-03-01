@@ -23,12 +23,35 @@ add_executable(space_invaders src/main.cpp
         src/AlienManager.h
 )
 
-set(GCC_COMPILE_OPTIONS "-Wextra;-Wall;-Wfloat-equal;-Wpointer-arith;-Wunreachable-code;-Winit-self;-Wuninitialized")
-set(GCC_COMPILE_DEBUG_OPTIONS "${GCC_COMPILE_OPTIONS};-g;-Og")
-set(GCC_COMPILE_RELEASE_OPTIONS "${GCC_COMPILE_OPTIONS};-O3;-flto")
+# Define common compile options
+set(COMMON_COMPILE_OPTIONS "-Wall")
 
-target_compile_options(space_invaders PRIVATE "$<$<CONFIG:Debug>:${GCC_COMPILE_DEBUG_OPTIONS}>")
-target_compile_options(space_invaders PRIVATE "$<$<CONFIG:Release>:${GCC_COMPILE_RELEASE_OPTIONS}>")
+# Define GCC-specific compile options
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set(GCC_COMPILE_OPTIONS "-Wextra" "-Wfloat-equal" "-Wpointer-arith" "-Wunreachable-code" "-Winit-self" "-Wuninitialized")
+    set(GCC_COMPILE_DEBUG_OPTIONS ${GCC_COMPILE_OPTIONS} "-g" "-Og")
+    set(GCC_COMPILE_RELEASE_OPTIONS ${GCC_COMPILE_OPTIONS} "-O3" "-flto")
+
+    target_compile_options(space_invaders PRIVATE
+            ${COMMON_COMPILE_OPTIONS}
+            "$<$<CONFIG:Debug>:${GCC_COMPILE_DEBUG_OPTIONS}>"
+            "$<$<CONFIG:Release>:${GCC_COMPILE_RELEASE_OPTIONS}>"
+    )
+endif ()
+
+# Define MSVC-specific compile options
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    set(MSVC_COMPILE_OPTIONS "/W3" "/permissive-")
+    set(MSVC_COMPILE_DEBUG_OPTIONS ${MSVC_COMPILE_OPTIONS} "/Zi" "/Od")
+    set(MSVC_COMPILE_RELEASE_OPTIONS ${MSVC_COMPILE_OPTIONS} "/O2" "/GL")
+
+    target_compile_options(space_invaders PRIVATE
+            ${COMMON_COMPILE_OPTIONS}
+            "$<$<CONFIG:Debug>:${MSVC_COMPILE_DEBUG_OPTIONS}>"
+            "$<$<CONFIG:Release>:${MSVC_COMPILE_RELEASE_OPTIONS}>"
+    )
+endif ()
+
 
 target_compile_features(space_invaders PRIVATE cxx_std_17)
 target_link_libraries(space_invaders PRIVATE SFML::Graphics)
