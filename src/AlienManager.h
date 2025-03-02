@@ -14,13 +14,11 @@ class AlienManager final : public sf::Drawable
     float tex_width;
     float tex_height;
 
-    // std::vector<std::vector<Alien> > aliens;
-    std::array<std::array<std::optional<Alien>, Cols>, Rows> aliens;
-
     const sf::Vector2f window_size;
     const sf::Vector2f min_pos;
     const sf::Vector2f max_pos;
     const float alien_speed;
+    const float alien_step_down;
     const float alien_scale;
     const int max_nr_aliens_row;
     const int max_nr_aliens_col;
@@ -31,16 +29,20 @@ class AlienManager final : public sf::Drawable
     Direction curr_direction = Direction::Right;
 
     public:
+        std::array<std::array<std::optional<Alien>, Cols>, Rows> aliens;
+
         AlienManager(const std::filesystem::path &filename,
                      const sf::Vector2f &window_size,
                      const sf::Vector2f &min_pos,
                      const sf::Vector2f &max_pos,
                      const float alien_speed,
+                     const float alien_step_down,
                      const float alien_scale,
                      const int max_nr_aliens_row,
                      const int max_nr_aliens_col) : texture(filename), window_size(window_size), min_pos(min_pos),
                                                     max_pos(max_pos), alien_speed(alien_speed),
-                                                    alien_scale(alien_scale), max_nr_aliens_row(max_nr_aliens_row),
+                                                    alien_step_down(alien_step_down), alien_scale(alien_scale),
+                                                    max_nr_aliens_row(max_nr_aliens_row),
                                                     max_nr_aliens_col(max_nr_aliens_col)
         {
             tex_width = texture.getSize().x * alien_scale;
@@ -49,8 +51,8 @@ class AlienManager final : public sf::Drawable
             // const float gap_x = (max_pos.x - min_pos.x - max_nr_aliens_col * tex_width) / (max_nr_aliens_row - 1);
             // const float gap_y = (max_pos.y - min_pos.y - max_nr_aliens_row * tex_height) / (max_nr_aliens_col - 1);
 
-            const float gap_x = 50.0f;
-            const float gap_y = 20.0f;
+            constexpr float gap_x = 50.0f;
+            constexpr float gap_y = 20.0f;
 
             offset_x = gap_x + tex_width;
             offset_y = gap_y + tex_height;
@@ -87,51 +89,64 @@ class AlienManager final : public sf::Drawable
 
         void move()
         {
-            if (curr_direction == Direction::Left)
+            const auto maybeAlien = curr_direction == Direction::Left ? findMostLeftAlien() : findMostRightAlien();
+
+            if (!maybeAlien)
             {
-                if (const auto maybeAlien = findMostLeftAlien())
-                {
-                    if (const Alien &left_most = maybeAlien->get(); (left_most.getPosition().x - tex_width) > 0)
-                    {
-                        // std::cout<<"left " << left_most.getPosition().x<< '\n';
-                        moveAllLeft();
-                    }
-                    else
-                    {
-                        curr_direction = Direction::Right;
-                    }
-                }
-                else
-                {
-                    std::cout << "Cannot find the most left alien, the array is empty\n";
-                }
+                std::cout << "Cannot find the most " << (curr_direction == Direction::Left ? "left" : "right") <<
+                    " alien, the array is empty\n";
+                return;
+            }
+
+            const Alien &edge_alien = maybeAlien->get();
+            const float alien_edge_pos = curr_direction == Direction::Left
+                                             ? edge_alien.getPosition().x - tex_width
+                                             : edge_alien.getPosition().x + tex_width;
+
+            const bool hit_boundary = curr_direction == Direction::Left
+                                          ? alien_edge_pos <= 0
+                                          : alien_edge_pos >= window_size.x;
+
+            if (hit_boundary)
+            {
+                curr_direction = curr_direction == Direction::Left ? Direction::Right : Direction::Left;
+                moveAllDown();
             }
             else
             {
-                if (const auto maybeAlien = findMostRightAlien())
+                curr_direction == Direction::Left ? moveAllLeft() : moveAllRight();
+            }
+        }
+
+        [[nodiscard]] bool handleCollision(const Bullet &bullet)
+        {
+            for (int row = 0; row < Rows; ++row)
+            {
+                for (int col = 0; col < Cols; ++col)
                 {
-                    if (const Alien &right_most = maybeAlien->get(); (right_most.getPosition().x + tex_width) <
-                        window_size.x)
+                    if (aliens[row][col])
                     {
-                        // std::cout<<"right " << right_most.getPosition().x<< '\n';
-                        moveAllRight();
+                        if (aliens[row][col]->checkCollision(bullet))
+                        {
+                            aliens[row][col].reset();
+                            return true;
+                        }
                     }
-                    else
-                    {
-                        curr_direction = Direction::Left;
-                    }
-                }
-                else
-                {
-                    std::cout << "Cannot find the most right alien, the array is empty\n";
                 }
             }
+
+            return false;
+        }
+
+        void killAlien(int row, int col)
+        {
+            aliens[row][col].reset();
         }
 
     private:
         [[nodiscard]] Alien createAlien(const sf::Vector2f &pos) const
         {
-            return Alien{texture, alien_speed, alien_scale, pos};
+            return Alien{texture, alien_speed, alien_step_down, alien_scale, pos};
         }
 
         void moveAllLeft()
@@ -157,6 +172,20 @@ class AlienManager final : public sf::Drawable
                     if (alien)
                     {
                         alien->move_right();
+                    }
+                }
+            }
+        }
+
+        void moveAllDown()
+        {
+            for (auto &&row : aliens)
+            {
+                for (auto &&alien : row)
+                {
+                    if (alien)
+                    {
+                        alien->move_down();
                     }
                 }
             }

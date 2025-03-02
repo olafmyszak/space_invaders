@@ -4,17 +4,20 @@
 #include <SFML/Graphics.hpp>
 
 #include "BulletManager.h"
+#include "Utils.h"
 
 class Alien final : public sf::Drawable
 {
     sf::Sprite sprite;
     float speed;
+    float step_down;
 
     public:
         Alien(const sf::Texture &texture,
               const float speed,
+              const float step_down,
               const float scale,
-              const sf::Vector2f &pos) : sprite(texture), speed(speed)
+              const sf::Vector2f &pos) : sprite(texture), speed(speed), step_down(step_down)
         {
             //Set origin to center
             sprite.setOrigin({
@@ -52,6 +55,11 @@ class Alien final : public sf::Drawable
             sprite.move({speed, 0.0f});
         }
 
+        void move_down()
+        {
+            sprite.move({0.0f, step_down});
+        }
+
         void shoot(BulletManager &bullet_manager) const
         {
             bullet_manager.addBullet(sprite.getPosition(), BulletType::Enemy);
@@ -60,6 +68,20 @@ class Alien final : public sf::Drawable
         [[nodiscard]] sf::Vector2f getPosition() const
         {
             return sprite.getPosition();
+        }
+
+        bool checkCollision(const Bullet &bullet) const
+        {
+            auto upper_left = bullet.getUpperLeft();
+            auto upper_right = bullet.getUpperRight();
+
+            // Move the pixels by one to account for contains() considering points lying on the edge
+            --upper_left.x;
+            ++upper_left.y;
+            ++upper_right.x;
+            ++upper_right.y;
+
+            return sprite.getGlobalBounds().contains(upper_left) || sprite.getGlobalBounds().contains(upper_right);
         }
 };
 

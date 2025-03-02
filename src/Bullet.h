@@ -6,17 +6,19 @@
 
 class Bullet final : public sf::Drawable
 {
-    sf::Sprite sprite;
     float speed;
-    int size_y;
     BulletType bullet_type;
+    float left_x;
+    float right_x;
 
     public:
+        sf::Sprite sprite;
+
         explicit Bullet(const sf::Texture &texture,
                         const float speed,
                         const float scale,
                         const sf::Vector2f &pos,
-                        const BulletType bullet_type) : sprite(texture), bullet_type(bullet_type)
+                        const BulletType bullet_type) : bullet_type(bullet_type), sprite(texture)
         {
             // If it's a player bullet, change the direction of movement
             if (bullet_type == BulletType::Player)
@@ -32,7 +34,8 @@ class Bullet final : public sf::Drawable
 
             sprite.setPosition(pos);
 
-            size_y = static_cast<int>(textureSize.y);
+            left_x = sprite.getOrigin().x - static_cast<float>(textureSize.x)  / 2.0f + pos.x;
+            right_x = sprite.getOrigin().x + static_cast<float>(textureSize.x)  / 2.0f + pos.x;
         }
 
         void draw(sf::RenderTarget &target, const sf::RenderStates states) const override
@@ -45,14 +48,19 @@ class Bullet final : public sf::Drawable
             sprite.move({0.0f, speed});
         }
 
-        int getSizeY() const
-        {
-            return size_y;
-        }
-
         sf::Vector2f getPosition() const
         {
             return sprite.getPosition();
+        }
+
+        sf::Vector2f getUpperLeft() const
+        {
+            return {left_x, sprite.getPosition().y};
+        }
+
+        sf::Vector2f getUpperRight() const
+        {
+            return {right_x, sprite.getPosition().y};
         }
 
         BulletType getBulletType() const

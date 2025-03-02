@@ -1,7 +1,6 @@
 #ifndef BULLETMANAGER_H
 #define BULLETMANAGER_H
 
-#include <algorithm>
 #include <iostream>
 #include <vector>
 
@@ -13,14 +12,15 @@ class BulletManager final : public sf::Drawable
 {
     const sf::Texture texture;
 
-    std::vector<Bullet> bullets{};
-
     const int min_height;
     const int max_height;
     const float bullet_speed;
     const float bullet_scale;
 
     public:
+        std::vector<Bullet> alien_bullets{};
+        std::optional<Bullet> player_bullet{};
+
         explicit BulletManager(const std::filesystem::path &filename,
                                const int min_height,
                                const int max_height,
@@ -33,57 +33,76 @@ class BulletManager final : public sf::Drawable
 
         void move()
         {
-            for (std::size_t i = 0, e = bullets.size(); i < e; ++i)
+            for (std::size_t i = 0, e = alien_bullets.size(); i < e; ++i)
             {
-                bullets[i].move();
+                alien_bullets[i].move();
                 // std::cout<<"("<<bullets[i].getPosition().x << ", " << bullets[i].getPosition().y << ")\n";
 
-                if (isOutOfBounds(bullets[i]))
+                if (isOutOfBounds(alien_bullets[i]))
                 {
-                    bullets.erase(bullets.begin() + static_cast<long long>(i));
+                    alien_bullets.erase(alien_bullets.begin() + static_cast<long long>(i));
+                }
+            }
+
+            if (player_bullet)
+            {
+                player_bullet->move();
+                if (isOutOfBounds(player_bullet.value()))
+                {
+                    player_bullet.reset();
                 }
             }
         }
 
         void draw(sf::RenderTarget &target, const sf::RenderStates states) const override
         {
-            for (auto &&bullet : bullets)
+            for (auto &&bullet : alien_bullets)
             {
                 bullet.draw(target, states);
+            }
+
+            if (player_bullet)
+            {
+                player_bullet->draw(target, states);
             }
         }
 
         void addBullet(const sf::Vector2f &pos, const BulletType bullet_type)
         {
-            if (canEntityShoot(bullet_type))
-            {
-                bullets.emplace_back(createBullet(pos, bullet_type));
-            }
-        }
-
-    private:
-        static constexpr int maxBulletsAllowed(const BulletType bullet_type)
-        {
             switch (bullet_type)
             {
                 case BulletType::Player:
-                    return 1;
+                    if (!player_bullet)
+                    {
+                        player_bullet.emplace(createBullet(pos, bullet_type));
+                    }
+                    break;
+
                 case BulletType::Enemy:
-                    return 10;
-                default:
-                    std::cout << "Invalid bullet type\n";
-                    return -1;
+                    if (canEntityShoot())
+                    {
+                        alien_bullets.emplace_back(createBullet(pos, bullet_type));
+                    }
+                    break;
             }
         }
 
-        bool canEntityShoot(const BulletType bullet_type)
+        void resetPlayerBullet()
         {
-            return std::count_if(bullets.begin(),
-                                 bullets.end(),
-                                 [bullet_type](const Bullet &bullet)
-                                 {
-                                     return bullet.getBulletType() == bullet_type;
-                                 }) < maxBulletsAllowed(bullet_type);
+            player_bullet.reset();
+        }
+
+        void eraseAlienBullet(const int index)
+        {
+            alien_bullets.erase(alien_bullets.begin() + index);
+        }
+
+    private:
+        static constexpr int max_bullets_allowed = 10;
+
+        bool canEntityShoot() const
+        {
+            return alien_bullets.size() < max_bullets_allowed;
         }
 
         [[nodiscard]] bool isOutOfBounds(const Bullet &bullet) const
