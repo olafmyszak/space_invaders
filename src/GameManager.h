@@ -16,8 +16,8 @@ class GameManager
         sf::VideoMode({window_x, window_y}), "Space Invaders", sf::Style::Titlebar | sf::Style::Close
     };
 
-    static constexpr float bullet_speed = 10.0f;
-    static constexpr float bullet_scale = 10.0f;
+    static constexpr float bullet_speed = 15.0f;
+    static constexpr sf::Vector2f bullet_scale = {5.0f, 12.5f};
     BulletManager bullet_manager{"../../assets/images/bullet.png", 0, window_y, bullet_speed, bullet_scale};
 
     static constexpr float spaceship_speed = 5.0f;

@@ -16,7 +16,7 @@ class Bullet final : public sf::Drawable
 
         explicit Bullet(const sf::Texture &texture,
                         const float speed,
-                        const float scale,
+                        const sf::Vector2f &scale,
                         const sf::Vector2f &pos,
                         const BulletType bullet_type) : bullet_type(bullet_type), sprite(texture)
         {
@@ -30,7 +30,7 @@ class Bullet final : public sf::Drawable
             const auto textureSize = texture.getSize();
             sprite.setOrigin({static_cast<float>(textureSize.x) / 2.0f, static_cast<float>(textureSize.y) / 2.0f});
 
-            sprite.setScale({scale, scale});
+            sprite.setScale(scale);
 
             sprite.setPosition(pos);
 

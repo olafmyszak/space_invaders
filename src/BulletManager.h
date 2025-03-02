@@ -15,7 +15,7 @@ class BulletManager final : public sf::Drawable
     const int min_height;
     const int max_height;
     const float bullet_speed;
-    const float bullet_scale;
+    const sf::Vector2f &bullet_scale;
 
     public:
         std::vector<Bullet> alien_bullets{};
@@ -25,7 +25,7 @@ class BulletManager final : public sf::Drawable
                                const int min_height,
                                const int max_height,
                                const float bullet_speed,
-                               const float bullet_scale) : texture(filename), min_height(min_height),
+                               const sf::Vector2f &bullet_scale) : texture(filename), min_height(min_height),
                                                            max_height(max_height), bullet_speed(bullet_speed),
                                                            bullet_scale(bullet_scale)
         {
