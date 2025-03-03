@@ -25,6 +25,10 @@ class Bullet final : public sf::Drawable
             {
                 this->speed = -speed;
             }
+            else
+            {
+                this->speed = speed;
+            }
 
             //Set origin to center
             const auto textureSize = texture.getSize();

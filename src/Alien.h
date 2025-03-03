@@ -13,11 +13,21 @@ class Alien final : public sf::Drawable
     float step_down;
 
     public:
+        enum class AlienType
+        {
+            A = 40,
+            B = 20,
+            C = 10
+        };
+
+        const AlienType alien_type;
+
         Alien(const sf::Texture &texture,
               const float speed,
               const float step_down,
               const float scale,
-              const sf::Vector2f &pos) : sprite(texture), speed(speed), step_down(step_down)
+              const sf::Vector2f &pos,
+              const AlienType alien_type) : sprite(texture), speed(speed), step_down(step_down), alien_type(alien_type)
         {
             //Set origin to center
             sprite.setOrigin({
@@ -28,17 +38,6 @@ class Alien final : public sf::Drawable
 
             sprite.setPosition(pos);
         }
-
-        // explicit Alien(Alien &&other) noexcept : sprite(other.sprite), speed(other.speed)
-        // {
-        // }
-
-        // Alien &operator=(Alien other)
-        // {
-        //     std::swap(sprite, other.sprite);
-        //     std::swap(speed, other.speed);
-        //     return *this;
-        // }
 
         void draw(sf::RenderTarget &target, const sf::RenderStates states) const override
         {

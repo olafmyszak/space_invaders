@@ -14,7 +14,8 @@ class BulletManager final : public sf::Drawable
 
     const int min_height;
     const int max_height;
-    const float bullet_speed;
+    const float player_bullet_speed;
+    const float enemy_bullet_speed;
     const sf::Vector2f &bullet_scale;
 
     public:
@@ -25,9 +26,12 @@ class BulletManager final : public sf::Drawable
                                const int min_height,
                                const int max_height,
                                const float bullet_speed,
+                               const float enemy_bullet_speed,
                                const sf::Vector2f &bullet_scale) : texture(filename), min_height(min_height),
-                                                           max_height(max_height), bullet_speed(bullet_speed),
-                                                           bullet_scale(bullet_scale)
+                                                                   max_height(max_height),
+                                                                   player_bullet_speed(bullet_speed),
+                                                                   enemy_bullet_speed(enemy_bullet_speed),
+                                                                   bullet_scale(bullet_scale)
         {
         }
 
@@ -40,7 +44,7 @@ class BulletManager final : public sf::Drawable
 
                 if (isOutOfBounds(alien_bullets[i]))
                 {
-                    alien_bullets.erase(alien_bullets.begin() + static_cast<long long>(i));
+                    alien_bullets.erase(alien_bullets.begin() + i);
                 }
             }
 
@@ -74,20 +78,20 @@ class BulletManager final : public sf::Drawable
                 case BulletType::Player:
                     if (!player_bullet)
                     {
-                        player_bullet.emplace(createBullet(pos, bullet_type));
+                        player_bullet.emplace(createBullet(pos, player_bullet_speed, bullet_type));
                     }
                     break;
 
                 case BulletType::Enemy:
                     if (canEntityShoot())
                     {
-                        alien_bullets.emplace_back(createBullet(pos, bullet_type));
+                        alien_bullets.emplace_back(createBullet(pos, enemy_bullet_speed, bullet_type));
                     }
                     break;
             }
         }
 
-        void resetPlayerBullet()
+        void erasePlayerBullet()
         {
             player_bullet.reset();
         }
@@ -112,9 +116,11 @@ class BulletManager final : public sf::Drawable
             return pos_y > max_height || pos_y < min_height;
         }
 
-        [[nodiscard]] Bullet createBullet(const sf::Vector2f &pos, const BulletType bullet_type) const
+        [[nodiscard]] Bullet createBullet(const sf::Vector2f &pos,
+                                          const float speed,
+                                          const BulletType bullet_type) const
         {
-            return Bullet(texture, bullet_speed, bullet_scale, pos, bullet_type);
+            return Bullet(texture, speed, bullet_scale, pos, bullet_type);
         }
 };
 

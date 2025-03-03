@@ -10,6 +10,7 @@ class Spaceship final : public sf::Drawable
     const sf::Texture texture;
     sf::Sprite sprite;
     const float speed;
+    int lives = 3;
 
     public:
         Spaceship(const std::filesystem::path &filename,
@@ -47,6 +48,33 @@ class Spaceship final : public sf::Drawable
         void shoot(BulletManager &bullet_manager) const
         {
             bullet_manager.addBullet(sprite.getPosition(), BulletType::Player);
+        }
+
+        [[nodiscard]] bool handleCollision(const Bullet &bullet)
+        {
+            auto upper_left = bullet.getUpperLeft();
+            auto upper_right = bullet.getUpperRight();
+
+            // Move the pixels by one to account for contains() considering points lying on the edge
+            --upper_left.x;
+            ++upper_left.y;
+            ++upper_right.x;
+            ++upper_right.y;
+
+            const bool isHit = sprite.getGlobalBounds().contains(upper_left) || sprite.getGlobalBounds().contains(
+                upper_right);
+
+            if (isHit)
+            {
+                --lives;
+            }
+
+            return isHit;
+        }
+
+        [[nodiscard]] bool isDead() const
+        {
+            return lives <= 0;
         }
 };
 
