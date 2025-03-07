@@ -31,7 +31,7 @@ set(COMMON_COMPILE_OPTIONS "-Wall")
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(GCC_COMPILE_OPTIONS "-Wextra" "-Wfloat-equal" "-Wpointer-arith" "-Wunreachable-code" "-Winit-self" "-Wuninitialized")
     set(GCC_COMPILE_DEBUG_OPTIONS ${GCC_COMPILE_OPTIONS} "-g" "-Og")
-    set(GCC_COMPILE_RELEASE_OPTIONS ${GCC_COMPILE_OPTIONS} "-O3" "-flto")
+    set(GCC_COMPILE_RELEASE_OPTIONS ${GCC_COMPILE_OPTIONS} "-O3")
 
     target_compile_options(space_invaders PRIVATE
             ${COMMON_COMPILE_OPTIONS}

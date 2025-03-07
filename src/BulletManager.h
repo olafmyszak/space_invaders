@@ -96,7 +96,7 @@ class BulletManager final : public sf::Drawable
             player_bullet.reset();
         }
 
-        void  eraseAlienBullet(const int index)
+        void eraseAlienBullet(const int index)
         {
             alien_bullets.erase(alien_bullets.begin() + index);
         }
