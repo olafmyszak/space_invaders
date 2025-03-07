@@ -45,7 +45,7 @@ class Menu
                 menu_texts.emplace_back(createCenteredText(font, menu_item, char_size, window_center_x, y_pos));
             }
 
-            int selected = 0;
+            unsigned int selected = 0;
             while (window.isOpen())
             {
                 // Process events
@@ -103,7 +103,7 @@ class Menu
                     {
                         text.setString(">" + text.getString());
                     }
-                    
+
                     window.draw(text);
                 }
 

@@ -87,6 +87,11 @@ class Alien final : public sf::Drawable
         {
             return static_cast<int>(alien_type);
         }
+
+        void setTexture(const sf::Texture& texture)
+        {
+            sprite.setTexture(texture);
+        }
 };
 
 #endif //ALIEN_H

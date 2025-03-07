@@ -36,20 +36,24 @@ class GameManager
     static constexpr float spaceship_speed = 8.0f;
     static constexpr float spaceship_scale = 0.2f;
     static constexpr sf::Vector2f spaceship_pos = {window_x / 2.0f, window_y - 0.1f * window_y};
-    Spaceship spaceship{"../../assets/images/spaceship.png", spaceship_speed, spaceship_scale, spaceship_pos, 0.0f, window_x};
+    Spaceship spaceship{
+        "../../assets/images/spaceship.png", spaceship_speed, spaceship_scale, spaceship_pos, 0.0f, window_x
+    };
 
     static constexpr int alien_time_step = 500;
     static constexpr float alien_speed = 40.0f;
     static constexpr float alien_step_down = 20.0f;
-    static constexpr float alien_scale = 0.15f;
+    static constexpr float alien_scale = 3.0f;
     static constexpr int aliens_row = 5;
     static constexpr int aliens_col = 10;
-    const std::vector<std::filesystem::path> paths = {
-        "../../assets/images/alien3.png", "../../assets/images/alien2.png", "../../assets/images/alien1.png"
+    const std::vector<AlienManager::TwoTextures> alien_textures = {
+        {"../../assets/images/alien3a.png", "../../assets/images/alien3b.png"},
+        {"../../assets/images/alien2a.png", "../../assets/images/alien2b.png"},
+        {"../../assets/images/alien1a.png", "../../assets/images/alien1b.png"}
     };
     AlienManager alien_manager{
-        paths, {window_x, window_y}, {0.1f * window_x, 0.1f * window_y}, {0.9f * window_x, 0.7f * window_y},
-        alien_speed,alien_time_step, alien_step_down, alien_scale
+        alien_textures, {0.05f * window_x, 0.1f * window_y}, {0.95f * window_x, 0.7f * window_y}, alien_speed,
+        alien_time_step, alien_step_down, alien_scale
     };
 
     int score = 0;
