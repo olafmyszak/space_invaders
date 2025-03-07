@@ -11,12 +11,20 @@ class Spaceship final : public sf::Drawable
     sf::Sprite sprite;
     const float speed;
     int lives = 3;
+    const sf::Vector2f original_pos;
+    const float min_x;
+    const float max_x;
+
+    float half_tex_size;
 
     public:
         Spaceship(const std::filesystem::path &filename,
                   const float speed,
                   const float scale,
-                  const sf::Vector2f &pos) : texture(filename), sprite(texture), speed(speed)
+                  const sf::Vector2f &pos,
+                  const float min_x,
+                  const float max_x): texture(filename), sprite(texture), speed(speed), original_pos(pos), min_x(min_x),
+                                      max_x(max_x)
 
         {
             //Set origin to center
@@ -27,6 +35,8 @@ class Spaceship final : public sf::Drawable
             sprite.setScale({scale, scale});
 
             sprite.setPosition(pos);
+
+            half_tex_size = texture.getSize().x * scale / 2.0f;
         }
 
         void draw(sf::RenderTarget &target, const sf::RenderStates states) const override
@@ -36,18 +46,23 @@ class Spaceship final : public sf::Drawable
 
         void move_left()
         {
-            sprite.move({-speed, 0.0f});
+            if (sprite.getPosition().x - half_tex_size >= min_x)
+            {
+                sprite.move({-speed, 0.0f});
+            }
         }
 
         void move_right()
         {
-            // std::cout << "(" << sprite.getOrigin().x << ", " << sprite.getOrigin().y << ")\n";
-            sprite.move({speed, 0.0f});
+            if (sprite.getPosition().x + half_tex_size <= max_x)
+            {
+                sprite.move({speed, 0.0f});
+            }
         }
 
         void shoot(BulletManager &bullet_manager) const
         {
-            bullet_manager.addBullet(sprite.getPosition(), BulletType::Player);
+            bullet_manager.addBullet(sprite.getPosition(), Bullet::BulletType::Player);
         }
 
         [[nodiscard]] bool handleCollision(const Bullet &bullet)
@@ -75,6 +90,17 @@ class Spaceship final : public sf::Drawable
         [[nodiscard]] bool isDead() const
         {
             return lives <= 0;
+        }
+
+        [[nodiscard]] int getLives() const
+        {
+            return lives;
+        }
+
+        void restart()
+        {
+            lives = 3;
+            sprite.setPosition(original_pos);
         }
 };
 

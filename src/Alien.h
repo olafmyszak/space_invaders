@@ -61,7 +61,7 @@ class Alien final : public sf::Drawable
 
         void shoot(BulletManager &bullet_manager) const
         {
-            bullet_manager.addBullet(sprite.getPosition(), BulletType::Enemy);
+            bullet_manager.addBullet(sprite.getPosition(), Bullet::BulletType::Enemy);
         }
 
         [[nodiscard]] sf::Vector2f getPosition() const
@@ -74,13 +74,23 @@ class Alien final : public sf::Drawable
             auto upper_left = bullet.getUpperLeft();
             auto upper_right = bullet.getUpperRight();
 
-            // Move the pixels by one to account for contains() considering points lying on the edge
+            // Move the pixels by one to account for contains() not considering points lying on the edge
             --upper_left.x;
             ++upper_left.y;
             ++upper_right.x;
             ++upper_right.y;
 
             return sprite.getGlobalBounds().contains(upper_left) || sprite.getGlobalBounds().contains(upper_right);
+        }
+
+        [[nodiscard]] int getScore() const
+        {
+            return static_cast<int>(alien_type);
+        }
+
+        void setTexture(const sf::Texture& texture)
+        {
+            sprite.setTexture(texture);
         }
 };
 

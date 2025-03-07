@@ -1,9 +1,12 @@
 #ifndef GAMEMANAGER_H
 #define GAMEMANAGER_H
 
+#include <fstream>
 #include <SFML/Graphics.hpp>
+#include <string>
 
 #include "AlienManager.h"
+#include "Menu.h"
 #include "Spaceship.h"
 
 class GameManager
@@ -16,6 +19,13 @@ class GameManager
         sf::VideoMode({window_x, window_y}), "Space Invaders", sf::Style::Titlebar | sf::Style::Close
     };
 
+    const sf::Font font{"../../assets/fonts/arial.ttf"};
+    Menu menu{font};
+
+    sf::Text player_lives_text{font, "Lives: ", 36};
+    sf::Text player_score_text{font, "Score: ", 36};
+    sf::Text high_score_text{font, "High Score : ", 36};
+
     static constexpr float player_bullet_speed = 15.0f;
     static constexpr float enemy_bullet_speed = 9.0f;
     static constexpr sf::Vector2f bullet_scale = {5.0f, 12.5f};
@@ -23,44 +33,120 @@ class GameManager
         "../../assets/images/bullet.png", 0, window_y, player_bullet_speed, enemy_bullet_speed, bullet_scale
     };
 
-    static constexpr float spaceship_speed = 5.0f;
-    static constexpr float spaceship_scale = 0.15f;
+    static constexpr float spaceship_speed = 8.0f;
+    static constexpr float spaceship_scale = 0.2f;
     static constexpr sf::Vector2f spaceship_pos = {window_x / 2.0f, window_y - 0.1f * window_y};
-    Spaceship spaceship{"../../assets/images/spaceship.png", spaceship_speed, spaceship_scale, spaceship_pos};
+    Spaceship spaceship{
+        "../../assets/images/spaceship.png", spaceship_speed, spaceship_scale, spaceship_pos, 0.0f, window_x
+    };
 
-    static constexpr sf::Time alien_time_step = sf::milliseconds(1000);
+    static constexpr int alien_time_step = 500;
     static constexpr float alien_speed = 40.0f;
     static constexpr float alien_step_down = 20.0f;
-    static constexpr float alien_scale = 0.15f;
+    static constexpr float alien_scale = 3.0f;
     static constexpr int aliens_row = 5;
     static constexpr int aliens_col = 10;
-
-    const std::vector<std::filesystem::path> paths = {
-        "../../assets/images/alien3.png", "../../assets/images/alien2.png", "../../assets/images/alien1.png"
+    const std::vector<AlienManager::TwoTextures> alien_textures = {
+        {"../../assets/images/alien3a.png", "../../assets/images/alien3b.png"},
+        {"../../assets/images/alien2a.png", "../../assets/images/alien2b.png"},
+        {"../../assets/images/alien1a.png", "../../assets/images/alien1b.png"}
     };
     AlienManager alien_manager{
-        paths, {window_x, window_y}, {0.1f * window_x, 0.1f * window_y}, {0.9f * window_x, 0.7f * window_y},
-        alien_speed, alien_step_down, alien_scale
+        alien_textures, {0.05f * window_x, 0.1f * window_y}, {0.95f * window_x, 0.7f * window_y}, alien_speed,
+        alien_time_step, alien_step_down, alien_scale
     };
+
+    int score = 0;
 
     public:
         GameManager()
         {
             window.setFramerateLimit(framerate_limit);
+
+            player_lives_text.setFillColor(sf::Color::Green);
+            player_lives_text.setStyle(sf::Text::Bold);
+            player_lives_text.setPosition({0.92f * window_x, 0.0f});
+
+            player_score_text.setFillColor(sf::Color::Green);
+            player_score_text.setStyle(sf::Text::Bold);
+            player_score_text.setPosition({0.05f, 0.0f});
+
+            high_score_text.setFillColor(sf::Color::Green);
+            high_score_text.setStyle(sf::Text::Bold);
+            high_score_text.setPosition({0.30f * window_x, 0.0f});
         }
 
         void run()
         {
+            int high_score = 0;
+
+            {
+                std::ifstream high_score_file{std::filesystem::path{"../../assets/high_score.txt"}};
+
+                if (!high_score_file)
+                {
+                    high_score_file.close();
+
+                    std::cout << "Could not open high_score.txt\n";
+                    std::cout << "Trying to create it...\n";
+
+                    if (std::ofstream of{std::filesystem::path{"../../assets/high_score.txt"}}; !of)
+                    {
+                        std::cout << "Error creating high_score.txt! Exiting...\n";
+                        return;
+                    }
+
+                    std::cout << "high_score.txt created\n";
+
+                    high_score_file.open("../../assets/high_score.txt");
+                }
+
+                std::string high_score_input;
+                std::getline(high_score_file, high_score_input);
+
+                high_score = high_score_input.empty() ? 0 : std::stoi(high_score_input);
+            }
+
+            high_score_text.setString("High Score: " + std::to_string(high_score));
+
             sf::Clock clock;
             while (window.isOpen())
             {
                 // Process events
                 while (const std::optional event = window.pollEvent())
                 {
-                    // Close window: exit
                     if (event->is<sf::Event::Closed>())
                     {
+                        saveHighScore(high_score);
                         window.close();
+                    }
+                    else if (const auto *key_pressed = event->getIf<sf::Event::KeyPressed>())
+                    {
+                        if (key_pressed->scancode == sf::Keyboard::Scan::Escape)
+                        {
+                            switch (menu.openMainMenu(window))
+                            {
+                                case Menu::MenuResult::Restart:
+                                    restart();
+                                    break;
+
+                                case Menu::MenuResult::ClearHighScore:
+                                    clearHighScore(&high_score);
+                                    high_score_text.setString("High Score: " + std::to_string(high_score));
+                                    break;
+
+                                case Menu::MenuResult::Exit:
+                                    saveHighScore(high_score);
+                                    window.close();
+                                    break;
+
+                                default: break;
+                            }
+                        }
+                        else if (key_pressed->scancode == sf::Keyboard::Scan::Space)
+                        {
+                            spaceship.shoot(bullet_manager);
+                        }
                     }
                 }
 
@@ -74,12 +160,7 @@ class GameManager
                     spaceship.move_right();
                 }
 
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::Space))
-                {
-                    spaceship.shoot(bullet_manager);
-                }
-
-                if (clock.getElapsedTime() >= alien_time_step)
+                if (clock.getElapsedTime() >= alien_manager.getTimeStep())
                 {
                     alien_manager.move();
                     alien_manager.shoot(bullet_manager);
@@ -88,7 +169,7 @@ class GameManager
 
                 bullet_manager.move();
 
-                handleCollisions();
+                const bool was_player_hit = handleCollisions();
 
                 // Clear screen
                 window.clear();
@@ -98,19 +179,36 @@ class GameManager
                 window.draw(bullet_manager);
                 window.draw(alien_manager);
 
+                // Draw text
+                player_lives_text.setString("Lives: " + std::to_string(spaceship.getLives()));
+                window.draw(player_lives_text);
+
+                player_score_text.setString("Score: " + std::to_string(score));
+                window.draw(player_score_text);
+
+                window.draw(high_score_text);
+
                 // Update the window
                 window.display();
+
+                if (was_player_hit)
+                {
+                    sf::sleep(sf::seconds(1));
+                }
             }
         }
 
     private:
-        void handleCollisions()
+        // Returns true if player was hit
+        bool handleCollisions()
         {
+            bool was_player_hit = false;
             if (const auto &player_bullet = bullet_manager.player_bullet)
             {
-                if (alien_manager.handleCollision(player_bullet.value()))
+                if (const int value = alien_manager.handleCollision(player_bullet.value()); value != 0)
                 {
                     bullet_manager.erasePlayerBullet();
+                    score += value;
                 }
             }
 
@@ -120,11 +218,62 @@ class GameManager
                 {
                     bullet_manager.eraseAlienBullet(i);
 
+                    was_player_hit = true;
+
                     if (spaceship.isDead())
                     {
-                        // TODO
+                        // TODO Player death
+                        switch (menu.openGameOverScreen(window))
+                        {
+                            case Menu::MenuResult::Restart:
+                                restart();
+                                break;
+
+                            default:
+                                window.close();
+                                break;
+                        }
                     }
                 }
+            }
+
+            return was_player_hit;
+        }
+
+        void restart()
+        {
+            spaceship.restart();
+            bullet_manager.restart();
+            alien_manager.restart();
+            score = 0;
+        }
+
+        void saveHighScore(const int high_score) const
+        {
+            if (score > high_score)
+            {
+                if (std::ofstream of{"../../assets/high_score.txt", std::ios::trunc}; !of)
+                {
+                    std::cout << "Error opening high_score.txt!\n";
+                }
+                else
+                {
+                    of << std::to_string(score);
+                }
+            }
+        }
+
+        static void clearHighScore(int *high_score)
+        {
+            *high_score = 0;
+
+            if (std::ofstream of{"../../assets/high_score.txt", std::ios::trunc}; !of)
+            {
+                std::cout << "Error opening high_score.txt!\n";
+            }
+            else
+            {
+                of << std::to_string(0);
             }
         }
 };

@@ -1,6 +1,7 @@
 #ifndef ALIENMANAGER_H
 #define ALIENMANAGER_H
 
+#include <algorithm>
 #include <array>
 #include <functional>
 #include <random>
@@ -13,14 +14,15 @@ class AlienManager final : public sf::Drawable
     static constexpr int Rows = 5;
     static constexpr int Cols = 10;
 
-    std::vector<sf::Texture> textures;
-
-    const sf::Vector2f window_size;
     const sf::Vector2f min_pos;
     const sf::Vector2f max_pos;
     const float alien_speed;
+    const int original_time_step;
+    int time_step;
     const float alien_step_down;
     const float alien_scale;
+    int alive_alien_count = Rows * Cols;
+    int texture_step = 0;
 
     enum class Direction { Left, Right };
     Direction curr_direction = Direction::Right;
@@ -33,58 +35,36 @@ class AlienManager final : public sf::Drawable
     public:
         std::array<std::array<std::optional<Alien>, Cols>, Rows> aliens{};
 
-        AlienManager(const std::vector<std::filesystem::path> &filenames,
-                     const sf::Vector2f &window_size,
+        struct TwoTextures
+        {
+            sf::Texture a;
+            sf::Texture b;
+
+            TwoTextures(const std::filesystem::path &file1, const std::filesystem::path &file2) : a(file1), b(file2)
+            {
+            }
+        };
+
+        AlienManager(const std::vector<TwoTextures> &textures,
                      const sf::Vector2f &min_pos,
                      const sf::Vector2f &max_pos,
                      const float alien_speed,
+                     const int time_step,
                      const float alien_step_down,
-                     const float alien_scale) : window_size(window_size), min_pos(min_pos), max_pos(max_pos),
-                                                alien_speed(alien_speed), alien_step_down(alien_step_down),
-                                                alien_scale(alien_scale)
+                     const float alien_scale) : min_pos(min_pos), max_pos(max_pos), alien_speed(alien_speed),
+                                                original_time_step(time_step), time_step(time_step),
+                                                alien_step_down(alien_step_down), alien_scale(alien_scale),
+                                                textures(textures)
 
         {
-            // Load all textures
-            for (auto &&filename : filenames)
-            {
-                textures.emplace_back(filename);
-            }
+            max_tex_size = std::max_element(textures.begin(),
+                                            textures.end(),
+                                            [](const TwoTextures &a, const TwoTextures &b)
+                                            {
+                                                return a.a.getSize().x - b.a.getSize().x;
+                                            })->a.getSize();
 
-            float curr_x = min_pos.x;
-            float curr_y = min_pos.y;
-
-            constexpr float gap_x = 120.0f;
-            constexpr float gap_y = 100.0f;
-
-            // 1 row of As, 2 rows of Bs, 2 rows of Cs
-            for (int col = 0; col < Cols; ++col)
-            {
-                aliens[0][col].emplace(createAlien(Alien::AlienType::A, {curr_x, curr_y}));
-                curr_x += gap_x;
-            }
-            curr_y += gap_y;
-
-            for (int row = 1; row < 3; ++row)
-            {
-                curr_x = min_pos.x;
-                for (int col = 0; col < Cols; ++col)
-                {
-                    aliens[row][col].emplace(createAlien(Alien::AlienType::B, {curr_x, curr_y}));
-                    curr_x += gap_x;
-                }
-                curr_y += gap_y;
-            }
-
-            for (int row = 3; row < Rows; ++row)
-            {
-                curr_x = min_pos.x;
-                for (int col = 0; col < Cols; ++col)
-                {
-                    aliens[row][col].emplace(createAlien(Alien::AlienType::C, {curr_x, curr_y}));
-                    curr_x += gap_x;
-                }
-                curr_y += gap_y;
-            }
+            initAliens();
 
             // Seed with hardware entropy
             rng.seed(std::random_device{}());
@@ -117,14 +97,9 @@ class AlienManager final : public sf::Drawable
 
             const Alien &edge_alien = maybeAlien->get();
 
-            const float tex_width = textures.at(alienTypeToIndex(edge_alien.alien_type)).getSize().x * alien_scale;
-            const float alien_edge_pos = curr_direction == Direction::Left
-                                             ? edge_alien.getPosition().x - tex_width
-                                             : edge_alien.getPosition().x + tex_width;
-
             const bool hit_boundary = curr_direction == Direction::Left
-                                          ? alien_edge_pos <= 0
-                                          : alien_edge_pos >= window_size.x;
+                                          ? edge_alien.getPosition().x - max_tex_size.x / 2.0f <= min_pos.x
+                                          : edge_alien.getPosition().x + max_tex_size.x / 2.0f >= max_pos.x;
 
             if (hit_boundary)
             {
@@ -135,6 +110,10 @@ class AlienManager final : public sf::Drawable
             {
                 curr_direction == Direction::Left ? moveAllLeft() : moveAllRight();
             }
+
+            texture_step = (texture_step + 1) % 2;
+
+            changeTextures();
         }
 
         void shoot(BulletManager &bullet_manager)
@@ -144,21 +123,22 @@ class AlienManager final : public sf::Drawable
             {
                 if (dist100(rng) <= alien_shot_chance)
                 {
-                    if (const std::optional<std::reference_wrapper<const Alien>> maybe_alien = findHighestInColumn(col))
+                    if (const std::optional<std::reference_wrapper<const Alien> > maybe_alien =
+                        findHighestInColumn(col))
                     {
                         const sf::Vector2f &pos = maybe_alien->get().getPosition();
-                        bullet_manager.addBullet(pos, BulletType::Enemy);
+                        bullet_manager.addBullet(pos, Bullet::BulletType::Enemy);
                     }
                     else
                     {
-                        std::cout << "Empty column " << col << "\n";
+                        // std::cout << "Empty column " << col << "\n";
                     }
                 }
             }
         }
 
-        // Returns true if an alien was hit
-        [[nodiscard]] bool handleCollision(const Bullet &bullet)
+        // Returns alien's score value if an alien was hit, 0 otherwise
+        [[nodiscard]] int handleCollision(const Bullet &bullet)
         {
             for (int row = 0; row < Rows; ++row)
             {
@@ -168,25 +148,47 @@ class AlienManager final : public sf::Drawable
                     {
                         if (aliens[row][col]->checkCollision(bullet))
                         {
+                            const int result = aliens[row][col]->getScore();
                             aliens[row][col].reset();
-                            return true;
+                            --alive_alien_count;
+
+                            // scaled_percentage = min_percentage + current_count / max_count * (max_percentage - min_percentage)
+                            const float percentage = 0.50f + static_cast<float>(alive_alien_count) / (Rows * Cols) *
+                                0.50f;
+                            time_step = percentage * original_time_step;
+
+                            return result;
                         }
                     }
                 }
             }
 
-            return false;
+            return 0;
+        }
+
+        void restart()
+        {
+            initAliens();
+            time_step = original_time_step;
+        }
+
+        [[nodiscard]] sf::Time getTimeStep() const
+        {
+            return sf::milliseconds(time_step);
         }
 
     private:
+        std::vector<TwoTextures> textures;
+        sf::Vector2u max_tex_size;
+
         [[nodiscard]] Alien createAlien(const Alien::AlienType alien_type, const sf::Vector2f &pos) const
         {
-            return Alien{
-                textures.at(alienTypeToIndex(alien_type)), alien_speed, alien_step_down, alien_scale, pos, alien_type
-            };
+            const TwoTextures &two_textures = textures.at(alienTypeToIndex(alien_type));
+            const sf::Texture &tex = texture_step == 0 ? two_textures.a : two_textures.b;
+            return Alien{tex, alien_speed, alien_step_down, alien_scale, pos, alien_type};
         }
 
-        static constexpr std::size_t alienTypeToIndex(const Alien::AlienType type)
+        static constexpr int alienTypeToIndex(const Alien::AlienType type)
         {
             switch (type)
             {
@@ -238,6 +240,47 @@ class AlienManager final : public sf::Drawable
             }
         }
 
+        void changeTextures()
+        {
+            const TwoTextures &two_tex1 = textures.at(0);
+            const sf::Texture &tex1 = texture_step == 0 ? two_tex1.a : two_tex1.b;
+
+            // 1 row of As, 2 rows of Bs, 2 rows of Cs
+            for (int col = 0; col < Cols; ++col)
+            {
+                if (aliens[0][col])
+                {
+                    aliens[0][col]->setTexture(tex1);
+                }
+            }
+
+            const TwoTextures &two_tex2 = textures.at(1);
+            const sf::Texture &tex2 = texture_step == 0 ? two_tex2.a : two_tex2.b;
+            for (int row = 1; row < 3; ++row)
+            {
+                for (int col = 0; col < Cols; ++col)
+                {
+                    if (aliens[row][col])
+                    {
+                        aliens[row][col]->setTexture(tex2);
+                    }
+                }
+            }
+
+            const TwoTextures &two_tex3 = textures.at(2);
+            const sf::Texture &tex3 = texture_step == 0 ? two_tex3.a : two_tex3.b;
+            for (int row = 3; row < Rows; ++row)
+            {
+                for (int col = 0; col < Cols; ++col)
+                {
+                    if (aliens[row][col])
+                    {
+                        aliens[row][col]->setTexture(tex3);
+                    }
+                }
+            }
+        }
+
         [[nodiscard]] std::optional<std::reference_wrapper<const Alien> > findMostLeftAlien() const
         {
             for (int col = 0; col < Cols; ++col)
@@ -281,6 +324,51 @@ class AlienManager final : public sf::Drawable
             }
 
             return std::nullopt;
+        }
+
+        void initAliens()
+        {
+            float curr_x = min_pos.x;
+            float curr_y = min_pos.y;
+
+            // const sf::Vector2u max_size = textures.at(0).a.getSize();
+            std::cout << max_tex_size.x << std::endl;
+
+            const float gap_x = max_tex_size.x * alien_scale * 1.6f;
+            const float gap_y = max_tex_size.y * alien_scale * 1.5f;
+
+            std::cout << gap_x << std::endl;
+
+            // 1 row of As, 2 rows of Bs, 2 rows of Cs
+            for (int col = 0; col < Cols; ++col)
+            {
+                // Emplace should destroy the contained value if it exists, so no need to clear this
+                aliens[0][col].emplace(createAlien(Alien::AlienType::A, {curr_x, curr_y}));
+                curr_x += gap_x;
+            }
+            curr_y += gap_y;
+
+            for (int row = 1; row < 3; ++row)
+            {
+                curr_x = min_pos.x;
+                for (int col = 0; col < Cols; ++col)
+                {
+                    aliens[row][col].emplace(createAlien(Alien::AlienType::B, {curr_x, curr_y}));
+                    curr_x += gap_x;
+                }
+                curr_y += gap_y;
+            }
+
+            for (int row = 3; row < Rows; ++row)
+            {
+                curr_x = min_pos.x;
+                for (int col = 0; col < Cols; ++col)
+                {
+                    aliens[row][col].emplace(createAlien(Alien::AlienType::C, {curr_x, curr_y}));
+                    curr_x += gap_x;
+                }
+                curr_y += gap_y;
+            }
         }
 };
 

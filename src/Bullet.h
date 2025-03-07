@@ -1,24 +1,29 @@
 #ifndef BULLET_H
 #define BULLET_H
 
-#include "BulletType.h"
+// #include "BulletType.h"
 #include <SFML/Graphics.hpp>
 
 class Bullet final : public sf::Drawable
 {
     float speed;
-    BulletType bullet_type;
     float left_x;
     float right_x;
 
     public:
+        enum class BulletType
+        {
+            Player,
+            Enemy
+        };
+
         sf::Sprite sprite;
 
         explicit Bullet(const sf::Texture &texture,
                         const float speed,
                         const sf::Vector2f &scale,
                         const sf::Vector2f &pos,
-                        const BulletType bullet_type) : bullet_type(bullet_type), sprite(texture)
+                        const BulletType bullet_type) : sprite(texture), bullet_type(bullet_type)
         {
             // If it's a player bullet, change the direction of movement
             if (bullet_type == BulletType::Player)
@@ -38,8 +43,8 @@ class Bullet final : public sf::Drawable
 
             sprite.setPosition(pos);
 
-            left_x = sprite.getOrigin().x - static_cast<float>(textureSize.x)  / 2.0f + pos.x;
-            right_x = sprite.getOrigin().x + static_cast<float>(textureSize.x)  / 2.0f + pos.x;
+            left_x = sprite.getOrigin().x - static_cast<float>(textureSize.x) / 2.0f + pos.x;
+            right_x = sprite.getOrigin().x + static_cast<float>(textureSize.x) / 2.0f + pos.x;
         }
 
         void draw(sf::RenderTarget &target, const sf::RenderStates states) const override
@@ -71,6 +76,9 @@ class Bullet final : public sf::Drawable
         {
             return bullet_type;
         }
+
+    private:
+        BulletType bullet_type;
 };
 
 #endif //BULLET_H

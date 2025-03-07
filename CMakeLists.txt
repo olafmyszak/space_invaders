@@ -15,13 +15,13 @@ FetchContent_MakeAvailable(SFML)
 
 add_executable(space_invaders src/main.cpp
         src/Bullet.h
-        src/BulletType.h
         src/Spaceship.h
         src/BulletManager.h
         src/Alien.h
         src/GameManager.h
         src/AlienManager.h
         src/Utils.h
+        src/Menu.h
 )
 
 # Define common compile options
