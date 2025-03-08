@@ -64,7 +64,7 @@ class Spaceship final : public sf::Drawable
 
         void shoot(BulletManager &bullet_manager) const
         {
-            bullet_manager.addBullet(sprite.getPosition(), Bullet::BulletType::Player);
+            bullet_manager.addBullet(sprite.getPosition(), Bullet::Type::Player);
         }
 
         [[nodiscard]] bool handleCollision(const Bullet &bullet)

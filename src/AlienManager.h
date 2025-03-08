@@ -2,7 +2,6 @@
 #define ALIENMANAGER_H
 
 #include <algorithm>
-#include <array>
 #include <functional>
 #include <random>
 #include <SFML/Graphics.hpp>
@@ -14,6 +13,9 @@ class AlienManager final : public sf::Drawable
 {
     static constexpr int Rows = 5;
     static constexpr int Cols = 10;
+
+    std::vector<std::vector<Alien> > aliens{Rows};
+    std::vector<Alien*> exploding_aliens{};
 
     const sf::Vector2f min_pos;
     const sf::Vector2f max_pos;
@@ -35,8 +37,6 @@ class AlienManager final : public sf::Drawable
     static constexpr int alien_shot_chance = 10;
 
     public:
-        std::array<std::array<std::optional<Alien>, Cols>, Rows> aliens{};
-
         struct TwoTextures
         {
             sf::Texture a;
@@ -77,9 +77,9 @@ class AlienManager final : public sf::Drawable
             {
                 for (auto &&alien : row)
                 {
-                    if (alien)
+                    if (!alien.isDead())
                     {
-                        alien->draw(target, states);
+                        alien.draw(target, states);
                     }
                 }
             }
@@ -87,29 +87,33 @@ class AlienManager final : public sf::Drawable
 
         void update(const std::int32_t delta_time, BulletManager &bullet_manager)
         {
-            if (move(delta_time))
+            move_timer += delta_time;
+
+            if (move_timer >= move_interval)
             {
+                move(delta_time);
                 shoot(bullet_manager);
+
+                for (Alien * exploding_alien : exploding_aliens)
+                {
+                    exploding_alien->state = Alien::State::Dead;
+                }
+                exploding_aliens.clear();
+
+                move_timer -= move_interval;
             }
         }
 
         // Returns true if enough time has passed for aliens to move
-        bool move(const std::int32_t delta_time)
+        void move(const std::int32_t delta_time)
         {
-            move_timer += delta_time;
-
-            if (move_timer < move_interval)
-            {
-                return false;
-            }
-
             const auto maybeAlien = curr_direction == Direction::Left ? findMostLeftAlien() : findMostRightAlien();
 
             if (!maybeAlien)
             {
-                std::cout << "Cannot find the most " << (curr_direction == Direction::Left ? "left" : "right") <<
-                    " alien, the array is empty\n";
-                return false;
+                std::cerr << "Cannot find the most " << (curr_direction == Direction::Left ? "left" : "right") <<
+                    " alien, the vector is empty\n";
+                return;
             }
 
             const Alien &edge_alien = maybeAlien->get();
@@ -131,10 +135,6 @@ class AlienManager final : public sf::Drawable
             texture_step = (texture_step + 1) % 2;
 
             changeTextures();
-
-            move_timer -= move_interval;
-
-            return true;
         }
 
         void shoot(BulletManager &bullet_manager)
@@ -148,25 +148,27 @@ class AlienManager final : public sf::Drawable
                         findHighestInColumn(col))
                     {
                         const sf::Vector2f &pos = maybe_alien->get().getPosition();
-                        bullet_manager.addBullet(pos, Bullet::BulletType::Enemy);
+                        bullet_manager.addBullet(pos, Bullet::Type::Enemy);
                     }
                 }
             }
         }
 
         // Returns alien's score value if an alien was hit, 0 otherwise
+        // If alien is hit, sets its state to Alien::State::Exploding and changes texture to explosion
         [[nodiscard]] int handleCollision(const Bullet &bullet)
         {
             for (int row = 0; row < Rows; ++row)
             {
                 for (int col = 0; col < Cols; ++col)
                 {
-                    if (aliens[row][col])
+                    if (Alien &curr_alien = aliens[row][col]; curr_alien.isAlive())
                     {
-                        if (aliens[row][col]->checkCollision(bullet))
+                        if (curr_alien.checkCollision(bullet))
                         {
-                            const int result = aliens[row][col]->getScore();
-                            aliens[row][col].reset();
+                            curr_alien.state = Alien::State::Exploding;
+                            curr_alien.setTexture(explosion_texture);
+                            exploding_aliens.emplace_back(&curr_alien);
                             --alive_alien_count;
 
                             // scaled_percentage = min_percentage + current_count / max_count * (max_percentage - min_percentage)
@@ -174,7 +176,7 @@ class AlienManager final : public sf::Drawable
                                 0.50f;
                             move_interval = percentage * original_move_interval;
 
-                            return result;
+                            return curr_alien.getScore();
                         }
                     }
                 }
@@ -194,20 +196,20 @@ class AlienManager final : public sf::Drawable
         const sf::Texture explosion_texture;
         sf::Vector2u max_tex_size;
 
-        [[nodiscard]] Alien createAlien(const Alien::AlienType alien_type, const sf::Vector2f &pos) const
+        [[nodiscard]] Alien createAlien(const Alien::Type alien_type, const sf::Vector2f &pos) const
         {
             const TwoTextures &two_textures = alien_textures.at(alienTypeToIndex(alien_type));
             const sf::Texture &tex = two_textures.a;
             return Alien{tex, alien_speed, alien_step_down, alien_scale, pos, alien_type};
         }
 
-        static constexpr int alienTypeToIndex(const Alien::AlienType type)
+        static constexpr int alienTypeToIndex(const Alien::Type type)
         {
             switch (type)
             {
-                case Alien::AlienType::A: return 0;
-                case Alien::AlienType::B: return 1;
-                case Alien::AlienType::C: return 2;
+                case Alien::Type::A: return 0;
+                case Alien::Type::B: return 1;
+                case Alien::Type::C: return 2;
             }
         }
 
@@ -217,18 +219,18 @@ class AlienManager final : public sf::Drawable
             {
                 for (auto &&alien : row)
                 {
-                    if (alien)
+                    if (alien.isAlive())
                     {
                         switch (direction)
                         {
                             case Direction::Left:
-                                alien->move_left(delta_time);
+                                alien.move_left(delta_time);
                                 break;
                             case Direction::Right:
-                                alien->move_right(delta_time);
+                                alien.move_right(delta_time);
                                 break;
                             case Direction::Down:
-                                alien->move_down(delta_time);
+                                alien.move_down(delta_time);
                                 break;
 
                             default:
@@ -248,9 +250,9 @@ class AlienManager final : public sf::Drawable
             // 1 row of As, 2 rows of Bs, 2 rows of Cs
             for (int col = 0; col < Cols; ++col)
             {
-                if (aliens[0][col])
+                if (aliens[0][col].isAlive())
                 {
-                    aliens[0][col]->setTexture(tex1);
+                    aliens[0][col].setTexture(tex1);
                 }
             }
 
@@ -260,9 +262,9 @@ class AlienManager final : public sf::Drawable
             {
                 for (int col = 0; col < Cols; ++col)
                 {
-                    if (aliens[row][col])
+                    if (aliens[row][col].isAlive())
                     {
-                        aliens[row][col]->setTexture(tex2);
+                        aliens[row][col].setTexture(tex2);
                     }
                 }
             }
@@ -273,9 +275,9 @@ class AlienManager final : public sf::Drawable
             {
                 for (int col = 0; col < Cols; ++col)
                 {
-                    if (aliens[row][col])
+                    if (aliens[row][col].isAlive())
                     {
-                        aliens[row][col]->setTexture(tex3);
+                        aliens[row][col].setTexture(tex3);
                     }
                 }
             }
@@ -287,9 +289,9 @@ class AlienManager final : public sf::Drawable
             {
                 for (int row = 0; row < Rows; ++row)
                 {
-                    if (aliens[row][col].has_value())
+                    if (aliens[row][col].isAlive())
                     {
-                        return aliens[row][col].value();
+                        return aliens[row][col];
                     }
                 }
             }
@@ -303,9 +305,9 @@ class AlienManager final : public sf::Drawable
             {
                 for (int row = 0; row < Rows; ++row)
                 {
-                    if (aliens[row][col].has_value())
+                    if (aliens[row][col].isAlive())
                     {
-                        return aliens[row][col].value();
+                        return aliens[row][col];
                     }
                 }
             }
@@ -317,9 +319,9 @@ class AlienManager final : public sf::Drawable
         {
             for (int row = 0; row < Rows; ++row)
             {
-                if (aliens[row][col].has_value())
+                if (aliens[row][col].isAlive())
                 {
-                    return aliens[row][col].value();
+                    return aliens[row][col];
                 }
             }
 
@@ -337,8 +339,7 @@ class AlienManager final : public sf::Drawable
             // 1 row of As, 2 rows of Bs, 2 rows of Cs
             for (int col = 0; col < Cols; ++col)
             {
-                // Emplace should destroy the contained value if it exists, so no need to clear this
-                aliens[0][col].emplace(createAlien(Alien::AlienType::A, {curr_x, curr_y}));
+                aliens.at(0).emplace_back(createAlien(Alien::Type::A, {curr_x, curr_y}));
                 curr_x += gap_x;
             }
             curr_y += gap_y;
@@ -348,7 +349,7 @@ class AlienManager final : public sf::Drawable
                 curr_x = min_pos.x;
                 for (int col = 0; col < Cols; ++col)
                 {
-                    aliens[row][col].emplace(createAlien(Alien::AlienType::B, {curr_x, curr_y}));
+                    aliens.at(row).emplace_back(createAlien(Alien::Type::B, {curr_x, curr_y}));
                     curr_x += gap_x;
                 }
                 curr_y += gap_y;
@@ -359,7 +360,7 @@ class AlienManager final : public sf::Drawable
                 curr_x = min_pos.x;
                 for (int col = 0; col < Cols; ++col)
                 {
-                    aliens[row][col].emplace(createAlien(Alien::AlienType::C, {curr_x, curr_y}));
+                    aliens.at(row).emplace_back(createAlien(Alien::Type::C, {curr_x, curr_y}));
                     curr_x += gap_x;
                 }
                 curr_y += gap_y;

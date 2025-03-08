@@ -13,21 +13,29 @@ class Alien final : public sf::Drawable
     float step_down;
 
     public:
-        enum class AlienType
+        enum class Type
         {
             A = 40,
             B = 20,
             C = 10
         };
 
-        const AlienType alien_type;
+        enum class State
+        {
+            Alive,
+            Exploding,
+            Dead
+        };
+
+        const Type alien_type;
+        State state = State::Alive;
 
         Alien(const sf::Texture &texture,
               const float speed,
               const float step_down,
               const float scale,
               const sf::Vector2f &pos,
-              const AlienType alien_type) : sprite(texture), speed(speed), step_down(step_down), alien_type(alien_type)
+              const Type alien_type) : sprite(texture), speed(speed), step_down(step_down), alien_type(alien_type)
         {
             //Set origin to center
             sprite.setOrigin({
@@ -64,7 +72,7 @@ class Alien final : public sf::Drawable
 
         void shoot(BulletManager &bullet_manager) const
         {
-            bullet_manager.addBullet(sprite.getPosition(), Bullet::BulletType::Enemy);
+            bullet_manager.addBullet(sprite.getPosition(), Bullet::Type::Enemy);
         }
 
         [[nodiscard]] sf::Vector2f getPosition() const
@@ -94,6 +102,16 @@ class Alien final : public sf::Drawable
         void setTexture(const sf::Texture &texture)
         {
             sprite.setTexture(texture);
+        }
+
+        [[nodiscard]] bool isAlive() const
+        {
+            return state == State::Alive;
+        }
+
+        [[nodiscard]] bool isDead() const
+        {
+            return state == State::Dead;
         }
 };
 
