@@ -52,9 +52,10 @@ class Bullet final : public sf::Drawable
             target.draw(sprite, states);
         }
 
-        void move()
+        void move(const std::int32_t delta_time)
         {
-            sprite.move({0.0f, speed});
+            const float distance = speed * delta_time;
+            sprite.move({0.0f, distance});
         }
 
         sf::Vector2f getPosition() const

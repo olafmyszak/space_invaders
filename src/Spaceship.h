@@ -44,19 +44,21 @@ class Spaceship final : public sf::Drawable
             target.draw(sprite, states);
         }
 
-        void move_left()
+        void move_left(const std::int32_t delta_time)
         {
             if (sprite.getPosition().x - half_tex_size >= min_x)
             {
-                sprite.move({-speed, 0.0f});
+                const float distance = -speed * delta_time;
+                sprite.move({distance, 0.0f});
             }
         }
 
-        void move_right()
+        void move_right(const std::int32_t delta_time)
         {
             if (sprite.getPosition().x + half_tex_size <= max_x)
             {
-                sprite.move({speed, 0.0f});
+                const float distance = speed * delta_time;
+                sprite.move({distance, 0.0f});
             }
         }
 

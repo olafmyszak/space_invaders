@@ -35,11 +35,11 @@ class BulletManager final : public sf::Drawable
         {
         }
 
-        void move()
+        void move(const std::int32_t delta_time)
         {
             for (std::size_t i = 0, e = alien_bullets.size(); i < e; ++i)
             {
-                alien_bullets[i].move();
+                alien_bullets[i].move(delta_time);
                 // std::cout<<"("<<bullets[i].getPosition().x << ", " << bullets[i].getPosition().y << ")\n";
 
                 if (isOutOfBounds(alien_bullets[i]))
@@ -50,7 +50,7 @@ class BulletManager final : public sf::Drawable
 
             if (player_bullet)
             {
-                player_bullet->move();
+                player_bullet->move(delta_time);
                 if (isOutOfBounds(player_bullet.value()))
                 {
                     player_bullet.reset();

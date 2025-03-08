@@ -13,7 +13,7 @@ class GameManager
 {
     static constexpr int window_x = 1920;
     static constexpr int window_y = 1080;
-    static constexpr int framerate_limit = 60;
+    static constexpr int framerate_limit = 144;
 
     sf::RenderWindow window{
         sf::VideoMode({window_x, window_y}), "Space Invaders", sf::Style::Titlebar | sf::Style::Close
@@ -26,23 +26,23 @@ class GameManager
     sf::Text player_score_text{font, "Score: ", 36};
     sf::Text high_score_text{font, "High Score : ", 36};
 
-    static constexpr float player_bullet_speed = 15.0f;
-    static constexpr float enemy_bullet_speed = 9.0f;
+    static constexpr float player_bullet_speed = 1.2f;
+    static constexpr float enemy_bullet_speed = 0.5f;
     static constexpr sf::Vector2f bullet_scale = {5.0f, 12.5f};
     BulletManager bullet_manager{
         "../../assets/images/bullet.png", 0, window_y, player_bullet_speed, enemy_bullet_speed, bullet_scale
     };
 
-    static constexpr float spaceship_speed = 8.0f;
+    static constexpr float spaceship_speed = 0.8f;
     static constexpr float spaceship_scale = 0.2f;
     static constexpr sf::Vector2f spaceship_pos = {window_x / 2.0f, window_y - 0.1f * window_y};
     Spaceship spaceship{
         "../../assets/images/spaceship.png", spaceship_speed, spaceship_scale, spaceship_pos, 0.0f, window_x
     };
 
-    static constexpr int alien_time_step = 500;
-    static constexpr float alien_speed = 40.0f;
-    static constexpr float alien_step_down = 20.0f;
+    static constexpr int alien_move_interval = 500;
+    static constexpr float alien_speed = 7.0f;
+    static constexpr float alien_step_down = 5.0f;
     static constexpr float alien_scale = 3.0f;
     static constexpr int aliens_row = 5;
     static constexpr int aliens_col = 10;
@@ -53,7 +53,7 @@ class GameManager
     };
     AlienManager alien_manager{
         alien_textures, {0.05f * window_x, 0.1f * window_y}, {0.95f * window_x, 0.7f * window_y}, alien_speed,
-        alien_time_step, alien_step_down, alien_scale
+        alien_move_interval, alien_step_down, alien_scale
     };
 
     int score = 0;
@@ -112,6 +112,8 @@ class GameManager
             sf::Clock clock;
             while (window.isOpen())
             {
+                std::int32_t delta_time = clock.restart().asMilliseconds();
+
                 // Process events
                 while (const std::optional event = window.pollEvent())
                 {
@@ -124,6 +126,7 @@ class GameManager
                     {
                         if (key_pressed->scancode == sf::Keyboard::Scan::Escape)
                         {
+                            clock.stop();
                             switch (menu.openMainMenu(window))
                             {
                                 case Menu::MenuResult::Restart:
@@ -142,6 +145,8 @@ class GameManager
 
                                 default: break;
                             }
+
+                            clock.start();
                         }
                         else if (key_pressed->scancode == sf::Keyboard::Scan::Space)
                         {
@@ -152,22 +157,21 @@ class GameManager
 
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::Left))
                 {
-                    spaceship.move_left();
+                    spaceship.move_left(delta_time);
                 }
 
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::Right))
                 {
-                    spaceship.move_right();
+                    spaceship.move_right(delta_time);
                 }
 
-                if (clock.getElapsedTime() >= alien_manager.getTimeStep())
+                if (alien_manager.move(delta_time))
                 {
-                    alien_manager.move();
+                    // Only shoot on alien move
                     alien_manager.shoot(bullet_manager);
-                    clock.restart();
                 }
 
-                bullet_manager.move();
+                bullet_manager.move(delta_time);
 
                 const bool was_player_hit = handleCollisions();
 
@@ -193,7 +197,9 @@ class GameManager
 
                 if (was_player_hit)
                 {
+                    clock.stop();
                     sf::sleep(sf::seconds(1));
+                    clock.start();
                 }
             }
         }

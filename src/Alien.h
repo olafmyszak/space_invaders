@@ -44,19 +44,22 @@ class Alien final : public sf::Drawable
             target.draw(sprite, states);
         }
 
-        void move_left()
+        void move_left(const std::int32_t delta_time)
         {
-            sprite.move({-speed, 0.0f});
+            const float distance = -speed * delta_time;
+            sprite.move({distance, 0.0f});
         }
 
-        void move_right()
+        void move_right(const std::int32_t delta_time)
         {
-            sprite.move({speed, 0.0f});
+            const float distance = speed * delta_time;
+            sprite.move({distance, 0.0f});
         }
 
-        void move_down()
+        void move_down(const std::int32_t delta_time)
         {
-            sprite.move({0.0f, step_down});
+            const float distance = step_down * delta_time;
+            sprite.move({0.0f, distance});
         }
 
         void shoot(BulletManager &bullet_manager) const
@@ -88,7 +91,7 @@ class Alien final : public sf::Drawable
             return static_cast<int>(alien_type);
         }
 
-        void setTexture(const sf::Texture& texture)
+        void setTexture(const sf::Texture &texture)
         {
             sprite.setTexture(texture);
         }
