@@ -26,7 +26,7 @@ class AlienManager final : public sf::Drawable
     int alive_alien_count = Rows * Cols;
     int texture_step = 0;
 
-    enum class Direction { Left, Right };
+    enum class Direction { Left, Right, Down };
     Direction curr_direction = Direction::Right;
 
     // Random engine for alien shooting
@@ -57,7 +57,8 @@ class AlienManager final : public sf::Drawable
                      const float alien_scale) : min_pos(min_pos), max_pos(max_pos), alien_speed(alien_speed),
                                                 original_move_interval(time_step), move_interval(time_step),
                                                 alien_step_down(alien_step_down), alien_scale(alien_scale),
-                                                alien_textures(alien_textures), explosion_texture(std::move(explosion_texture))
+                                                alien_textures(alien_textures),
+                                                explosion_texture(std::move(explosion_texture))
 
         {
             max_tex_size = std::max_element(alien_textures.begin(),
@@ -92,6 +93,7 @@ class AlienManager final : public sf::Drawable
             }
         }
 
+        // Returns true if enough time has passed for aliens to move
         bool move(const std::int32_t delta_time)
         {
             move_timer += delta_time;
@@ -119,11 +121,11 @@ class AlienManager final : public sf::Drawable
             if (hit_boundary)
             {
                 curr_direction = curr_direction == Direction::Left ? Direction::Right : Direction::Left;
-                moveAllDown(delta_time);
+                moveAll(delta_time, Direction::Down);
             }
             else
             {
-                curr_direction == Direction::Left ? moveAllLeft(delta_time) : moveAllRight(delta_time);
+                moveAll(delta_time, curr_direction);
             }
 
             texture_step = (texture_step + 1) % 2;
@@ -147,10 +149,6 @@ class AlienManager final : public sf::Drawable
                     {
                         const sf::Vector2f &pos = maybe_alien->get().getPosition();
                         bullet_manager.addBullet(pos, Bullet::BulletType::Enemy);
-                    }
-                    else
-                    {
-                        // std::cout << "Empty column " << col << "\n";
                     }
                 }
             }
@@ -191,11 +189,6 @@ class AlienManager final : public sf::Drawable
             move_interval = original_move_interval;
         }
 
-        [[nodiscard]] sf::Time getTimeStep() const
-        {
-            return sf::milliseconds(move_interval);
-        }
-
     private:
         const std::vector<TwoTextures> alien_textures;
         const sf::Texture explosion_texture;
@@ -218,7 +211,7 @@ class AlienManager final : public sf::Drawable
             }
         }
 
-        void moveAllLeft(const std::int32_t delta_time)
+        void moveAll(const std::int32_t delta_time, const Direction direction)
         {
             for (auto &&row : aliens)
             {
@@ -226,35 +219,22 @@ class AlienManager final : public sf::Drawable
                 {
                     if (alien)
                     {
-                        alien->move_left(delta_time);
-                    }
-                }
-            }
-        }
+                        switch (direction)
+                        {
+                            case Direction::Left:
+                                alien->move_left(delta_time);
+                                break;
+                            case Direction::Right:
+                                alien->move_right(delta_time);
+                                break;
+                            case Direction::Down:
+                                alien->move_down(delta_time);
+                                break;
 
-        void moveAllRight(const std::int32_t delta_time)
-        {
-            for (auto &&row : aliens)
-            {
-                for (auto &&alien : row)
-                {
-                    if (alien)
-                    {
-                        alien->move_right(delta_time);
-                    }
-                }
-            }
-        }
-
-        void moveAllDown(const std::int32_t delta_time)
-        {
-            for (auto &&row : aliens)
-            {
-                for (auto &&alien : row)
-                {
-                    if (alien)
-                    {
-                        alien->move_down(delta_time);
+                            default:
+                                std::cerr << "No such direction\n";
+                                return;
+                        }
                     }
                 }
             }
