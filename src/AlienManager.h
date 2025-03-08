@@ -17,8 +17,9 @@ class AlienManager final : public sf::Drawable
     const sf::Vector2f min_pos;
     const sf::Vector2f max_pos;
     const float alien_speed;
-    const int original_time_step;
-    int time_step;
+    const int original_move_interval;
+    int move_interval;
+    std::int32_t move_timer = 0;
     const float alien_step_down;
     const float alien_scale;
     int alive_alien_count = Rows * Cols;
@@ -52,7 +53,7 @@ class AlienManager final : public sf::Drawable
                      const int time_step,
                      const float alien_step_down,
                      const float alien_scale) : min_pos(min_pos), max_pos(max_pos), alien_speed(alien_speed),
-                                                original_time_step(time_step), time_step(time_step),
+                                                original_move_interval(time_step), move_interval(time_step),
                                                 alien_step_down(alien_step_down), alien_scale(alien_scale),
                                                 textures(textures)
 
@@ -84,15 +85,22 @@ class AlienManager final : public sf::Drawable
             }
         }
 
-        void move()
+        bool move(const std::int32_t delta_time)
         {
+            move_timer += delta_time;
+
+            if (move_timer < move_interval)
+            {
+                return false;
+            }
+
             const auto maybeAlien = curr_direction == Direction::Left ? findMostLeftAlien() : findMostRightAlien();
 
             if (!maybeAlien)
             {
                 std::cout << "Cannot find the most " << (curr_direction == Direction::Left ? "left" : "right") <<
                     " alien, the array is empty\n";
-                return;
+                return false;
             }
 
             const Alien &edge_alien = maybeAlien->get();
@@ -104,16 +112,20 @@ class AlienManager final : public sf::Drawable
             if (hit_boundary)
             {
                 curr_direction = curr_direction == Direction::Left ? Direction::Right : Direction::Left;
-                moveAllDown();
+                moveAllDown(delta_time);
             }
             else
             {
-                curr_direction == Direction::Left ? moveAllLeft() : moveAllRight();
+                curr_direction == Direction::Left ? moveAllLeft(delta_time) : moveAllRight(delta_time);
             }
 
             texture_step = (texture_step + 1) % 2;
 
             changeTextures();
+
+            move_timer -= move_interval;
+
+            return true;
         }
 
         void shoot(BulletManager &bullet_manager)
@@ -155,7 +167,7 @@ class AlienManager final : public sf::Drawable
                             // scaled_percentage = min_percentage + current_count / max_count * (max_percentage - min_percentage)
                             const float percentage = 0.50f + static_cast<float>(alive_alien_count) / (Rows * Cols) *
                                 0.50f;
-                            time_step = percentage * original_time_step;
+                            move_interval = percentage * original_move_interval;
 
                             return result;
                         }
@@ -169,12 +181,12 @@ class AlienManager final : public sf::Drawable
         void restart()
         {
             initAliens();
-            time_step = original_time_step;
+            move_interval = original_move_interval;
         }
 
         [[nodiscard]] sf::Time getTimeStep() const
         {
-            return sf::milliseconds(time_step);
+            return sf::milliseconds(move_interval);
         }
 
     private:
@@ -184,7 +196,7 @@ class AlienManager final : public sf::Drawable
         [[nodiscard]] Alien createAlien(const Alien::AlienType alien_type, const sf::Vector2f &pos) const
         {
             const TwoTextures &two_textures = textures.at(alienTypeToIndex(alien_type));
-            const sf::Texture &tex = texture_step == 0 ? two_textures.a : two_textures.b;
+            const sf::Texture &tex = two_textures.a;
             return Alien{tex, alien_speed, alien_step_down, alien_scale, pos, alien_type};
         }
 
@@ -198,7 +210,7 @@ class AlienManager final : public sf::Drawable
             }
         }
 
-        void moveAllLeft()
+        void moveAllLeft(const std::int32_t delta_time)
         {
             for (auto &&row : aliens)
             {
@@ -206,13 +218,13 @@ class AlienManager final : public sf::Drawable
                 {
                     if (alien)
                     {
-                        alien->move_left();
+                        alien->move_left(delta_time);
                     }
                 }
             }
         }
 
-        void moveAllRight()
+        void moveAllRight(const std::int32_t delta_time)
         {
             for (auto &&row : aliens)
             {
@@ -220,13 +232,13 @@ class AlienManager final : public sf::Drawable
                 {
                     if (alien)
                     {
-                        alien->move_right();
+                        alien->move_right(delta_time);
                     }
                 }
             }
         }
 
-        void moveAllDown()
+        void moveAllDown(const std::int32_t delta_time)
         {
             for (auto &&row : aliens)
             {
@@ -234,7 +246,7 @@ class AlienManager final : public sf::Drawable
                 {
                     if (alien)
                     {
-                        alien->move_down();
+                        alien->move_down(delta_time);
                     }
                 }
             }
@@ -331,13 +343,8 @@ class AlienManager final : public sf::Drawable
             float curr_x = min_pos.x;
             float curr_y = min_pos.y;
 
-            // const sf::Vector2u max_size = textures.at(0).a.getSize();
-            std::cout << max_tex_size.x << std::endl;
-
             const float gap_x = max_tex_size.x * alien_scale * 1.6f;
             const float gap_y = max_tex_size.y * alien_scale * 1.5f;
-
-            std::cout << gap_x << std::endl;
 
             // 1 row of As, 2 rows of Bs, 2 rows of Cs
             for (int col = 0; col < Cols; ++col)
