@@ -6,6 +6,7 @@
 #include <functional>
 #include <random>
 #include <SFML/Graphics.hpp>
+#include <utility>
 
 #include "Alien.h"
 
@@ -29,7 +30,7 @@ class AlienManager final : public sf::Drawable
     Direction curr_direction = Direction::Right;
 
     // Random engine for alien shooting
-    std::mt19937 rng{};
+    std::mt19937 rng{std::random_device{}()};
     std::uniform_int_distribution<std::mt19937::result_type> dist100{1, 100};
     static constexpr int alien_shot_chance = 10;
 
@@ -46,7 +47,8 @@ class AlienManager final : public sf::Drawable
             }
         };
 
-        AlienManager(const std::vector<TwoTextures> &textures,
+        AlienManager(const std::vector<TwoTextures> &alien_textures,
+                     sf::Texture explosion_texture,
                      const sf::Vector2f &min_pos,
                      const sf::Vector2f &max_pos,
                      const float alien_speed,
@@ -55,20 +57,17 @@ class AlienManager final : public sf::Drawable
                      const float alien_scale) : min_pos(min_pos), max_pos(max_pos), alien_speed(alien_speed),
                                                 original_move_interval(time_step), move_interval(time_step),
                                                 alien_step_down(alien_step_down), alien_scale(alien_scale),
-                                                textures(textures)
+                                                alien_textures(alien_textures), explosion_texture(std::move(explosion_texture))
 
         {
-            max_tex_size = std::max_element(textures.begin(),
-                                            textures.end(),
+            max_tex_size = std::max_element(alien_textures.begin(),
+                                            alien_textures.end(),
                                             [](const TwoTextures &a, const TwoTextures &b)
                                             {
                                                 return a.a.getSize().x - b.a.getSize().x;
                                             })->a.getSize();
 
             initAliens();
-
-            // Seed with hardware entropy
-            rng.seed(std::random_device{}());
         }
 
         void draw(sf::RenderTarget &target, const sf::RenderStates states) const override
@@ -82,6 +81,14 @@ class AlienManager final : public sf::Drawable
                         alien->draw(target, states);
                     }
                 }
+            }
+        }
+
+        void update(const std::int32_t delta_time, BulletManager &bullet_manager)
+        {
+            if (move(delta_time))
+            {
+                shoot(bullet_manager);
             }
         }
 
@@ -190,12 +197,13 @@ class AlienManager final : public sf::Drawable
         }
 
     private:
-        std::vector<TwoTextures> textures;
+        const std::vector<TwoTextures> alien_textures;
+        const sf::Texture explosion_texture;
         sf::Vector2u max_tex_size;
 
         [[nodiscard]] Alien createAlien(const Alien::AlienType alien_type, const sf::Vector2f &pos) const
         {
-            const TwoTextures &two_textures = textures.at(alienTypeToIndex(alien_type));
+            const TwoTextures &two_textures = alien_textures.at(alienTypeToIndex(alien_type));
             const sf::Texture &tex = two_textures.a;
             return Alien{tex, alien_speed, alien_step_down, alien_scale, pos, alien_type};
         }
@@ -254,7 +262,7 @@ class AlienManager final : public sf::Drawable
 
         void changeTextures()
         {
-            const TwoTextures &two_tex1 = textures.at(0);
+            const TwoTextures &two_tex1 = alien_textures.at(0);
             const sf::Texture &tex1 = texture_step == 0 ? two_tex1.a : two_tex1.b;
 
             // 1 row of As, 2 rows of Bs, 2 rows of Cs
@@ -266,7 +274,7 @@ class AlienManager final : public sf::Drawable
                 }
             }
 
-            const TwoTextures &two_tex2 = textures.at(1);
+            const TwoTextures &two_tex2 = alien_textures.at(1);
             const sf::Texture &tex2 = texture_step == 0 ? two_tex2.a : two_tex2.b;
             for (int row = 1; row < 3; ++row)
             {
@@ -279,7 +287,7 @@ class AlienManager final : public sf::Drawable
                 }
             }
 
-            const TwoTextures &two_tex3 = textures.at(2);
+            const TwoTextures &two_tex3 = alien_textures.at(2);
             const sf::Texture &tex3 = texture_step == 0 ? two_tex3.a : two_tex3.b;
             for (int row = 3; row < Rows; ++row)
             {

@@ -34,14 +34,14 @@ class GameManager
     };
 
     static constexpr float spaceship_speed = 0.8f;
-    static constexpr float spaceship_scale = 0.2f;
+    static constexpr float spaceship_scale = 4.0f;
     static constexpr sf::Vector2f spaceship_pos = {window_x / 2.0f, window_y - 0.1f * window_y};
     Spaceship spaceship{
         "../../assets/images/spaceship.png", spaceship_speed, spaceship_scale, spaceship_pos, 0.0f, window_x
     };
 
     static constexpr int alien_move_interval = 500;
-    static constexpr float alien_speed = 7.0f;
+    static constexpr float alien_speed = 5.0f;
     static constexpr float alien_step_down = 5.0f;
     static constexpr float alien_scale = 3.0f;
     static constexpr int aliens_row = 5;
@@ -51,9 +51,11 @@ class GameManager
         {"../../assets/images/alien2a.png", "../../assets/images/alien2b.png"},
         {"../../assets/images/alien1a.png", "../../assets/images/alien1b.png"}
     };
+
+    const sf::Texture explosion_texture{"../../assets/images/alienExplosion.png"};
     AlienManager alien_manager{
-        alien_textures, {0.05f * window_x, 0.1f * window_y}, {0.95f * window_x, 0.7f * window_y}, alien_speed,
-        alien_move_interval, alien_step_down, alien_scale
+        alien_textures, explosion_texture, {0.05f * window_x, 0.1f * window_y}, {0.95f * window_x, 0.7f * window_y},
+        alien_speed, alien_move_interval, alien_step_down, alien_scale
     };
 
     int score = 0;
@@ -165,11 +167,12 @@ class GameManager
                     spaceship.move_right(delta_time);
                 }
 
-                if (alien_manager.move(delta_time))
-                {
-                    // Only shoot on alien move
-                    alien_manager.shoot(bullet_manager);
-                }
+                alien_manager.update(delta_time, bullet_manager);
+                // if (alien_manager.move(delta_time))
+                // {
+                //     // Only shoot on alien move
+                //     alien_manager.shoot(bullet_manager);
+                // }
 
                 bullet_manager.move(delta_time);
 
