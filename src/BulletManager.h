@@ -71,18 +71,18 @@ class BulletManager final : public sf::Drawable
             }
         }
 
-        void addBullet(const sf::Vector2f &pos, const Bullet::BulletType bullet_type)
+        void addBullet(const sf::Vector2f &pos, const Bullet::Type bullet_type)
         {
             switch (bullet_type)
             {
-                case Bullet::BulletType::Player:
+                case Bullet::Type::Player:
                     if (!player_bullet)
                     {
                         player_bullet.emplace(createBullet(pos, player_bullet_speed, bullet_type));
                     }
                     break;
 
-                case Bullet::BulletType::Enemy:
+                case Bullet::Type::Enemy:
                     if (canEntityShoot())
                     {
                         alien_bullets.emplace_back(createBullet(pos, enemy_bullet_speed, bullet_type));
@@ -124,7 +124,7 @@ class BulletManager final : public sf::Drawable
 
         [[nodiscard]] Bullet createBullet(const sf::Vector2f &pos,
                                           const float speed,
-                                          const Bullet::BulletType bullet_type) const
+                                          const Bullet::Type bullet_type) const
         {
             return Bullet(texture, speed, bullet_scale, pos, bullet_type);
         }

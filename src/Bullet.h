@@ -11,7 +11,7 @@ class Bullet final : public sf::Drawable
     float right_x;
 
     public:
-        enum class BulletType
+        enum class Type
         {
             Player,
             Enemy
@@ -23,10 +23,10 @@ class Bullet final : public sf::Drawable
                         const float speed,
                         const sf::Vector2f &scale,
                         const sf::Vector2f &pos,
-                        const BulletType bullet_type) : sprite(texture), bullet_type(bullet_type)
+                        const Type bullet_type) : sprite(texture), bullet_type(bullet_type)
         {
             // If it's a player bullet, change the direction of movement
-            if (bullet_type == BulletType::Player)
+            if (bullet_type == Type::Player)
             {
                 this->speed = -speed;
             }
@@ -73,13 +73,13 @@ class Bullet final : public sf::Drawable
             return {right_x, sprite.getPosition().y};
         }
 
-        BulletType getBulletType() const
+        Type getBulletType() const
         {
             return bullet_type;
         }
 
     private:
-        BulletType bullet_type;
+        Type bullet_type;
 };
 
 #endif //BULLET_H
