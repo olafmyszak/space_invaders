@@ -27,6 +27,7 @@ class AlienManager final : public sf::Drawable
     const float alien_scale;
     int alive_alien_count = Rows * Cols;
     int texture_step = 0;
+    bool all_aliens_dead = false;
 
     enum class Direction { Left, Right, Down };
     Direction curr_direction = Direction::Right;
@@ -111,8 +112,9 @@ class AlienManager final : public sf::Drawable
 
             if (!maybeAlien)
             {
-                std::cerr << "Cannot find the most " << (curr_direction == Direction::Left ? "left" : "right") <<
-                    " alien, the vector is empty\n";
+                // std::cerr << "Cannot find the most " << (curr_direction == Direction::Left ? "left" : "right") <<
+                    // " alien, the vector is empty\n";
+                all_aliens_dead = true;
                 return;
             }
 
@@ -189,6 +191,13 @@ class AlienManager final : public sf::Drawable
         {
             initAliens();
             move_interval = original_move_interval;
+            alive_alien_count = Rows * Cols;
+            all_aliens_dead = false;
+        }
+
+        [[nodiscard]] bool allAliensDead() const
+        {
+            return all_aliens_dead;
         }
 
     private:
@@ -330,6 +339,11 @@ class AlienManager final : public sf::Drawable
 
         void initAliens()
         {
+            for (auto &&vector : aliens)
+            {
+                vector.clear();
+            }
+
             float curr_x = min_pos.x;
             float curr_y = min_pos.y;
 

@@ -113,18 +113,25 @@ class Menu
             return MenuResult::Exit;
         }
 
-        MenuResult openGameOverScreen(sf::RenderWindow &window)
+        MenuResult openGameOverScreen(sf::RenderWindow &window, const int final_score)
         {
             const float window_center_x = window.getSize().x / 2.0f;
             float y_pos = 0.2f * window.getSize().y;
 
             menu_texts.clear();
 
+            menu_texts.emplace_back(createCenteredText(font,
+                                                       "Final score: " + std::to_string(final_score),
+                                                       char_size,
+                                                       window_center_x,
+                                                       y_pos));
+            y_pos += spacing;
             menu_texts.emplace_back(createCenteredText(font, "Restart?", char_size, window_center_x, y_pos));
             y_pos += spacing;
             menu_texts.emplace_back(createCenteredText(font, "Exit", char_size, window_center_x, y_pos));
 
-            int selected = 0;
+            int selected = 1;
+
             while (window.isOpen())
             {
                 // Process events
@@ -136,22 +143,26 @@ class Menu
                     }
                     else if (const auto *key_pressed = event->getIf<sf::Event::KeyPressed>())
                     {
+                        constexpr int low = 1;
+                        constexpr int high = 2;
+
                         if (key_pressed->scancode == sf::Keyboard::Scan::Down)
                         {
-                            selected = (selected + 1) % 2;
+                            // selected = std::clamp(selected + 1, low, high);
+                            selected = wrap(selected + 1, low, high);
                         }
                         else if (key_pressed->scancode == sf::Keyboard::Scan::Up)
                         {
-                            selected = (selected - 1) % 2;
+                            selected = wrap(selected - 1, low, high);
                         }
                         else if (key_pressed->scancode == sf::Keyboard::Scan::Space || key_pressed->scancode ==
                             sf::Keyboard::Scan::Enter)
                         {
                             switch (selected)
                             {
-                                case 0:
-                                    return MenuResult::Restart;
                                 case 1:
+                                    return MenuResult::Restart;
+                                case 2:
                                     return MenuResult::Exit;
 
                                 default:
@@ -168,7 +179,7 @@ class Menu
                 {
                     auto text = menu_texts[i];
 
-                    if (i == selected)
+                    if (i != 0 && i == selected)
                     {
                         text.setString(">" + text.getString());
                     }
@@ -199,6 +210,25 @@ class Menu
             });
             text.setPosition({x, y});
             return text;
+        }
+
+        static int wrap(const int value, const int min, const int max)
+        {
+            const int range = max - min + 1;
+
+            if (value < min || value > max)
+            {
+                int normalized = (value - min) % range;
+
+                if (normalized < 0)
+                {
+                    normalized += range;
+                }
+
+                return min + normalized;
+            }
+
+            return value;
         }
 };
 

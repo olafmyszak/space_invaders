@@ -59,6 +59,8 @@ class GameManager
     };
 
     int score = 0;
+    int high_score = -1;
+    const std::filesystem::path high_score_path{"../../assets/high_score.txt"};
 
     public:
         GameManager()
@@ -80,48 +82,20 @@ class GameManager
 
         void run()
         {
-            int high_score = 0;
-
-            {
-                std::ifstream high_score_file{std::filesystem::path{"../../assets/high_score.txt"}};
-
-                if (!high_score_file)
-                {
-                    high_score_file.close();
-
-                    std::cout << "Could not open high_score.txt\n";
-                    std::cout << "Trying to create it...\n";
-
-                    if (std::ofstream of{std::filesystem::path{"../../assets/high_score.txt"}}; !of)
-                    {
-                        std::cout << "Error creating high_score.txt! Exiting...\n";
-                        return;
-                    }
-
-                    std::cout << "high_score.txt created\n";
-
-                    high_score_file.open("../../assets/high_score.txt");
-                }
-
-                std::string high_score_input;
-                std::getline(high_score_file, high_score_input);
-
-                high_score = high_score_input.empty() ? 0 : std::stoi(high_score_input);
-            }
-
+            high_score = loadHighScore(high_score_path);
             high_score_text.setString("High Score: " + std::to_string(high_score));
 
             sf::Clock clock;
             while (window.isOpen())
             {
-                std::int32_t delta_time = clock.restart().asMilliseconds();
+                const std::int32_t delta_time = clock.restart().asMilliseconds();
 
                 // Process events
                 while (const std::optional event = window.pollEvent())
                 {
                     if (event->is<sf::Event::Closed>())
                     {
-                        saveHighScore(high_score);
+                        saveHighScore(high_score_path);
                         window.close();
                     }
                     else if (const auto *key_pressed = event->getIf<sf::Event::KeyPressed>())
@@ -136,12 +110,12 @@ class GameManager
                                     break;
 
                                 case Menu::MenuResult::ClearHighScore:
-                                    clearHighScore(&high_score);
+                                    clearHighScore(high_score_path);
                                     high_score_text.setString("High Score: " + std::to_string(high_score));
                                     break;
 
                                 case Menu::MenuResult::Exit:
-                                    saveHighScore(high_score);
+                                    saveHighScore(high_score_path);
                                     window.close();
                                     break;
 
@@ -157,6 +131,11 @@ class GameManager
                     }
                 }
 
+                if (alien_manager.allAliensDead())
+                {
+                    nextLevel();
+                }
+
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::Left))
                 {
                     spaceship.move_left(delta_time);
@@ -168,12 +147,6 @@ class GameManager
                 }
 
                 alien_manager.update(delta_time, bullet_manager);
-                // if (alien_manager.move(delta_time))
-                // {
-                //     // Only shoot on alien move
-                //     alien_manager.shoot(bullet_manager);
-                // }
-
                 bullet_manager.move(delta_time);
 
                 const bool was_player_hit = handleCollisions();
@@ -204,6 +177,24 @@ class GameManager
                     sf::sleep(sf::seconds(1));
                     clock.start();
                 }
+
+                if (spaceship.isDead())
+                {
+                    clock.stop();
+                    saveHighScore(high_score_path);
+                    switch (menu.openGameOverScreen(window, score))
+                    {
+                        case Menu::MenuResult::Restart:
+                            restart();
+                            break;
+
+                        default:
+                            window.close();
+                            break;
+                    }
+
+                    clock.start();
+                }
             }
         }
 
@@ -228,25 +219,16 @@ class GameManager
                     bullet_manager.eraseAlienBullet(i);
 
                     was_player_hit = true;
-
-                    if (spaceship.isDead())
-                    {
-                        // TODO Player death
-                        switch (menu.openGameOverScreen(window))
-                        {
-                            case Menu::MenuResult::Restart:
-                                restart();
-                                break;
-
-                            default:
-                                window.close();
-                                break;
-                        }
-                    }
                 }
             }
 
             return was_player_hit;
+        }
+
+        void nextLevel()
+        {
+            bullet_manager.restart();
+            alien_manager.restart();
         }
 
         void restart()
@@ -255,15 +237,45 @@ class GameManager
             bullet_manager.restart();
             alien_manager.restart();
             score = 0;
+            saveHighScore(high_score_path);
+            high_score = loadHighScore(high_score_path);
+            high_score_text.setString("High Score: " + std::to_string(high_score));
         }
 
-        void saveHighScore(const int high_score) const
+        static int loadHighScore(const std::filesystem::path &path)
+        {
+            std::ifstream high_score_file{path};
+
+            if (!high_score_file)
+            {
+                high_score_file.close();
+
+                std::cout << "Could not open high_score.txt\n";
+                std::cout << "Trying to create it...\n";
+
+                if (std::ofstream of{path}; !of)
+                {
+                    throw std::ios_base::failure("Failed to create file: " + path.string());
+                }
+
+                std::cout << "high_score.txt created\n";
+
+                high_score_file.open("../../assets/high_score.txt");
+            }
+
+            std::string high_score_input;
+            std::getline(high_score_file, high_score_input);
+
+            return high_score_input.empty() ? 0 : std::stoi(high_score_input);
+        }
+
+        void saveHighScore(const std::filesystem::path &path) const
         {
             if (score > high_score)
             {
-                if (std::ofstream of{"../../assets/high_score.txt", std::ios::trunc}; !of)
+                if (std::ofstream of{path, std::ios::trunc}; !of)
                 {
-                    std::cout << "Error opening high_score.txt!\n";
+                    throw std::ios_base::failure("Failed to open file: " + path.string());
                 }
                 else
                 {
@@ -272,13 +284,13 @@ class GameManager
             }
         }
 
-        static void clearHighScore(int *high_score)
+        void clearHighScore(const std::filesystem::path &path)
         {
-            *high_score = 0;
+            high_score = 0;
 
-            if (std::ofstream of{"../../assets/high_score.txt", std::ios::trunc}; !of)
+            if (std::ofstream of{path, std::ios::trunc}; !of)
             {
-                std::cout << "Error opening high_score.txt!\n";
+                throw std::ios_base::failure("Failed to open file: " + path.string());
             }
             else
             {
