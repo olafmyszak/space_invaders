@@ -2,6 +2,7 @@
 #define ALIEN_H
 
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 
 #include "BulletManager.h"
 #include "Utils.h"
@@ -27,6 +28,13 @@ class Alien final : public sf::Drawable
             Dead
         };
 
+        enum class Direction
+        {
+            Left,
+            Right,
+            Down
+        };
+
         const Type alien_type;
         State state = State::Alive;
 
@@ -45,6 +53,8 @@ class Alien final : public sf::Drawable
             sprite.setScale({scale, scale});
 
             sprite.setPosition(pos);
+
+
         }
 
         void draw(sf::RenderTarget &target, const sf::RenderStates states) const override
@@ -52,27 +62,31 @@ class Alien final : public sf::Drawable
             target.draw(sprite, states);
         }
 
-        void move_left(const std::int32_t delta_time)
+        void move(const std::int32_t delta_time, const Direction direction)
         {
-            const float distance = -speed * delta_time;
-            sprite.move({distance, 0.0f});
-        }
+            switch (direction)
+            {
+                case Alien::Direction::Left:
+                    move_left(delta_time);
+                    break;
+                case Alien::Direction::Right:
+                    move_right(delta_time);
+                    break;
+                case Alien::Direction::Down:
+                    move_down(delta_time);
+                    break;
 
-        void move_right(const std::int32_t delta_time)
-        {
-            const float distance = speed * delta_time;
-            sprite.move({distance, 0.0f});
-        }
-
-        void move_down(const std::int32_t delta_time)
-        {
-            const float distance = step_down * delta_time;
-            sprite.move({0.0f, distance});
+                default:
+                    std::cerr << "No such direction\n";
+                    break;
+            }
         }
 
         void shoot(BulletManager &bullet_manager) const
         {
-            bullet_manager.addBullet(sprite.getPosition(), Bullet::Type::Enemy);
+            if (bullet_manager.addBullet(sprite.getPosition(), Bullet::Type::Enemy))
+            {
+            }
         }
 
         [[nodiscard]] sf::Vector2f getPosition() const
@@ -112,6 +126,25 @@ class Alien final : public sf::Drawable
         [[nodiscard]] bool isDead() const
         {
             return state == State::Dead;
+        }
+
+    private:
+        void move_left(const std::int32_t delta_time)
+        {
+            const float distance = -speed * delta_time;
+            sprite.move({distance, 0.0f});
+        }
+
+        void move_right(const std::int32_t delta_time)
+        {
+            const float distance = speed * delta_time;
+            sprite.move({distance, 0.0f});
+        }
+
+        void move_down(const std::int32_t delta_time)
+        {
+            const float distance = step_down * delta_time;
+            sprite.move({0.0f, distance});
         }
 };
 

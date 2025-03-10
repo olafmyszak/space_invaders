@@ -17,6 +17,11 @@ class Spaceship final : public sf::Drawable
 
     float half_tex_size;
 
+    const sf::SoundBuffer shoot_sound_buffer{"../../assets/sounds/shoot.wav"};
+    sf::Sound shoot_sound{shoot_sound_buffer};
+    const sf::SoundBuffer explosion_sound_buffer{"../../assets/sounds/explosion.wav"};
+    sf::Sound explosion_sound{explosion_sound_buffer};
+
     public:
         Spaceship(const std::filesystem::path &filename,
                   const float speed,
@@ -37,6 +42,9 @@ class Spaceship final : public sf::Drawable
             sprite.setPosition(pos);
 
             half_tex_size = texture.getSize().x * scale / 2.0f;
+
+            shoot_sound.setVolume(30.0f);
+            explosion_sound.setVolume(30.0f);
         }
 
         void draw(sf::RenderTarget &target, const sf::RenderStates states) const override
@@ -62,9 +70,12 @@ class Spaceship final : public sf::Drawable
             }
         }
 
-        void shoot(BulletManager &bullet_manager) const
+        void shoot(BulletManager &bullet_manager)
         {
-            bullet_manager.addBullet(sprite.getPosition(), Bullet::Type::Player);
+            if (bullet_manager.addBullet(sprite.getPosition(), Bullet::Type::Player))
+            {
+                shoot_sound.play();
+            }
         }
 
         [[nodiscard]] bool handleCollision(const Bullet &bullet)
@@ -84,6 +95,7 @@ class Spaceship final : public sf::Drawable
             if (isHit)
             {
                 --lives;
+                explosion_sound.play();
             }
 
             return isHit;

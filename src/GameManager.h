@@ -77,7 +77,7 @@ class GameManager
 
             high_score_text.setFillColor(sf::Color::Green);
             high_score_text.setStyle(sf::Text::Bold);
-            high_score_text.setPosition({0.30f * window_x, 0.0f});
+            high_score_text.setPosition({0.40f * window_x, 0.0f});
         }
 
         void run()
