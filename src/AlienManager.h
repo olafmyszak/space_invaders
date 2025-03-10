@@ -15,7 +15,7 @@ class AlienManager final : public sf::Drawable
     static constexpr int Cols = 10;
 
     std::vector<std::vector<Alien> > aliens{Rows};
-    std::vector<Alien*> exploding_aliens{};
+    std::vector<Alien *> exploding_aliens{};
 
     const sf::Vector2f min_pos;
     const sf::Vector2f max_pos;
@@ -29,13 +29,30 @@ class AlienManager final : public sf::Drawable
     int texture_step = 0;
     bool all_aliens_dead = false;
 
-    enum class Direction { Left, Right, Down };
-    Direction curr_direction = Direction::Right;
+    Alien::Direction curr_direction = Alien::Direction::Right;
 
     // Random engine for alien shooting
     std::mt19937 rng{std::random_device{}()};
     std::uniform_int_distribution<std::mt19937::result_type> dist100{1, 100};
     static constexpr int alien_shot_chance = 10;
+
+    const sf::SoundBuffer alien_killed_sound_buffer{"../../assets/sounds/invader_killed.wav"};
+    sf::Sound alien_killed_sound{alien_killed_sound_buffer};
+
+    const std::array<sf::SoundBuffer, 4> alien_move_sound_buffers = {
+        sf::SoundBuffer("../../assets/sounds/invader_move1.wav"),
+        sf::SoundBuffer("../../assets/sounds/invader_move2.wav"),
+        sf::SoundBuffer("../../assets/sounds/invader_move3.wav"),
+        sf::SoundBuffer("../../assets/sounds/invader_move4.wav"),
+    };
+    unsigned int current_sound_index = 0;
+    // sf::Sound alien_move_sound{alien_move_sound_buffers.at(current_sound_index)};
+    std::array<sf::Sound, 4> alien_move_sounds = {
+        sf::Sound(alien_move_sound_buffers.at(0)),
+        sf::Sound(alien_move_sound_buffers.at(1)),
+        sf::Sound(alien_move_sound_buffers.at(2)),
+        sf::Sound(alien_move_sound_buffers.at(3)),
+    };
 
     public:
         struct TwoTextures
@@ -70,6 +87,9 @@ class AlienManager final : public sf::Drawable
                                             })->a.getSize();
 
             initAliens();
+
+            alien_killed_sound.setVolume(30.0f);
+            // alien_move_sound.setVolume(50.0f);
         }
 
         void draw(sf::RenderTarget &target, const sf::RenderStates states) const override
@@ -95,7 +115,10 @@ class AlienManager final : public sf::Drawable
                 move(delta_time);
                 shoot(bullet_manager);
 
-                for (Alien * exploding_alien : exploding_aliens)
+                alien_move_sounds.at(current_sound_index).play();
+                current_sound_index = (current_sound_index + 1) % 4;
+
+                for (Alien *exploding_alien : exploding_aliens)
                 {
                     exploding_alien->state = Alien::State::Dead;
                 }
@@ -108,26 +131,30 @@ class AlienManager final : public sf::Drawable
         // Returns true if enough time has passed for aliens to move
         void move(const std::int32_t delta_time)
         {
-            const auto maybeAlien = curr_direction == Direction::Left ? findMostLeftAlien() : findMostRightAlien();
+            const auto maybeAlien = curr_direction == Alien::Direction::Left
+                                        ? findMostLeftAlien()
+                                        : findMostRightAlien();
 
             if (!maybeAlien)
             {
                 // std::cerr << "Cannot find the most " << (curr_direction == Direction::Left ? "left" : "right") <<
-                    // " alien, the vector is empty\n";
+                // " alien, the vector is empty\n";
                 all_aliens_dead = true;
                 return;
             }
 
             const Alien &edge_alien = maybeAlien->get();
 
-            const bool hit_boundary = curr_direction == Direction::Left
+            const bool hit_boundary = curr_direction == Alien::Direction::Left
                                           ? edge_alien.getPosition().x - max_tex_size.x / 2.0f <= min_pos.x
                                           : edge_alien.getPosition().x + max_tex_size.x / 2.0f >= max_pos.x;
 
             if (hit_boundary)
             {
-                curr_direction = curr_direction == Direction::Left ? Direction::Right : Direction::Left;
-                moveAll(delta_time, Direction::Down);
+                curr_direction = curr_direction == Alien::Direction::Left
+                                     ? Alien::Direction::Right
+                                     : Alien::Direction::Left;
+                moveAll(delta_time, Alien::Direction::Down);
             }
             else
             {
@@ -149,8 +176,7 @@ class AlienManager final : public sf::Drawable
                     if (const std::optional<std::reference_wrapper<const Alien> > maybe_alien =
                         findHighestInColumn(col))
                     {
-                        const sf::Vector2f &pos = maybe_alien->get().getPosition();
-                        bullet_manager.addBullet(pos, Bullet::Type::Enemy);
+                        maybe_alien->get().shoot(bullet_manager);
                     }
                 }
             }
@@ -177,6 +203,8 @@ class AlienManager final : public sf::Drawable
                             const float percentage = 0.50f + static_cast<float>(alive_alien_count) / (Rows * Cols) *
                                 0.50f;
                             move_interval = percentage * original_move_interval;
+
+                            alien_killed_sound.play();
 
                             return curr_alien.getScore();
                         }
@@ -222,7 +250,7 @@ class AlienManager final : public sf::Drawable
             }
         }
 
-        void moveAll(const std::int32_t delta_time, const Direction direction)
+        void moveAll(const std::int32_t delta_time, const Alien::Direction direction)
         {
             for (auto &&row : aliens)
             {
@@ -230,22 +258,7 @@ class AlienManager final : public sf::Drawable
                 {
                     if (alien.isAlive())
                     {
-                        switch (direction)
-                        {
-                            case Direction::Left:
-                                alien.move_left(delta_time);
-                                break;
-                            case Direction::Right:
-                                alien.move_right(delta_time);
-                                break;
-                            case Direction::Down:
-                                alien.move_down(delta_time);
-                                break;
-
-                            default:
-                                std::cerr << "No such direction\n";
-                                return;
-                        }
+                        alien.move(delta_time, direction);
                     }
                 }
             }

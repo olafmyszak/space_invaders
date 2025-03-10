@@ -55,5 +55,5 @@ endif ()
 
 
 target_compile_features(space_invaders PRIVATE cxx_std_17)
-target_link_libraries(space_invaders PRIVATE SFML::Graphics)
+target_link_libraries(space_invaders PRIVATE SFML::Graphics SFML::Audio)
 
