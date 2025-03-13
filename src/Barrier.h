@@ -14,6 +14,8 @@ class Barrier final : public sf::Drawable
     const float scale;
 
     static constexpr float bullet_hit_radius = 50.0f;
+    std::mt19937 rng{std::random_device{}()};
+    std::uniform_int_distribution<std::mt19937::result_type> dist100{1, 100};
 
     public:
         Barrier(const std::filesystem::path &path, const float scale, const sf::Vector2f &pos) : image(path),
@@ -56,9 +58,12 @@ class Barrier final : public sf::Drawable
             {
                 for (int y = -range / 2; y <= range / 2; ++y)
                 {
-                    if (const sf::Vector2u curr = {pixel.x + x, pixel.y + y}; imageContainsPixel(curr))
+                    if (dist100(rng) <= 50)
                     {
-                        image.setPixel(curr, sf::Color::Transparent);
+                        if (const sf::Vector2u curr = {pixel.x + x, pixel.y + y}; imageContainsPixel(curr))
+                        {
+                            image.setPixel(curr, sf::Color::Transparent);
+                        }
                     }
                 }
             }
