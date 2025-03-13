@@ -35,6 +35,7 @@ Space Invaders is a modern take on the classic arcade game, built using C++ and 
 
 3. **Run the game:**
     ```bash
+    cd bin
     ./space_invaders
     ```
 
