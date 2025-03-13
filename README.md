@@ -2,6 +2,8 @@
 
 Space Invaders is a modern take on the classic arcade game, built using C++ and the SFML library. Relive the nostalgic gameplay of the original while enjoying smooth, responsive graphics and sound!
 
+![Screenshot](screenshots/img.png)
+
 ## Installation
 
 ### Prerequisites
