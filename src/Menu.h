@@ -175,7 +175,7 @@ class Menu
 
                 window.clear();
 
-                for (size_t i = 0, e = menu_texts.size(); i < e; ++i)
+                for (int i = 0, e = menu_texts.size(); i < e; ++i)
                 {
                     auto text = menu_texts[i];
 

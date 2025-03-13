@@ -34,7 +34,7 @@ class AlienManager final : public sf::Drawable
     // Random engine for alien shooting
     std::mt19937 rng{std::random_device{}()};
     std::uniform_int_distribution<std::mt19937::result_type> dist100{1, 100};
-    static constexpr int alien_shot_chance = 10;
+    static constexpr int alien_shot_chance = 5;
 
     const sf::SoundBuffer alien_killed_sound_buffer{"../../assets/sounds/invader_killed.wav"};
     sf::Sound alien_killed_sound{alien_killed_sound_buffer};
@@ -167,7 +167,7 @@ class AlienManager final : public sf::Drawable
         void shoot(BulletManager &bullet_manager)
         {
             // Each column has a random chance to shoot one bullet
-            for (int col = 0; col < Cols; ++col)
+            for (unsigned int col = 0; col < Cols; ++col)
             {
                 if (dist100(rng) <= alien_shot_chance)
                 {
@@ -184,9 +184,9 @@ class AlienManager final : public sf::Drawable
         // If alien is hit, sets its state to Alien::State::Exploding and changes texture to explosion
         [[nodiscard]] int handleCollision(const Bullet &bullet)
         {
-            for (int row = 0; row < Rows; ++row)
+            for (unsigned int row = 0; row < Rows; ++row)
             {
-                for (int col = 0; col < Cols; ++col)
+                for (unsigned int col = 0; col < Cols; ++col)
                 {
                     if (Alien &curr_alien = aliens[row][col]; curr_alien.isAlive())
                     {
@@ -246,6 +246,8 @@ class AlienManager final : public sf::Drawable
                 case Alien::Type::B: return 1;
                 case Alien::Type::C: return 2;
             }
+
+            return -1;
         }
 
         void moveAll(const std::int32_t delta_time, const Alien::Direction direction)
@@ -268,7 +270,7 @@ class AlienManager final : public sf::Drawable
             const sf::Texture &tex1 = texture_step == 0 ? two_tex1.a : two_tex1.b;
 
             // 1 row of As, 2 rows of Bs, 2 rows of Cs
-            for (int col = 0; col < Cols; ++col)
+            for (unsigned int col = 0; col < Cols; ++col)
             {
                 if (aliens[0][col].isAlive())
                 {
@@ -278,9 +280,9 @@ class AlienManager final : public sf::Drawable
 
             const TwoTextures &two_tex2 = alien_textures.at(1);
             const sf::Texture &tex2 = texture_step == 0 ? two_tex2.a : two_tex2.b;
-            for (int row = 1; row < 3; ++row)
+            for (unsigned int row = 1; row < 3; ++row)
             {
-                for (int col = 0; col < Cols; ++col)
+                for (unsigned int col = 0; col < Cols; ++col)
                 {
                     if (aliens[row][col].isAlive())
                     {
@@ -291,9 +293,9 @@ class AlienManager final : public sf::Drawable
 
             const TwoTextures &two_tex3 = alien_textures.at(2);
             const sf::Texture &tex3 = texture_step == 0 ? two_tex3.a : two_tex3.b;
-            for (int row = 3; row < Rows; ++row)
+            for (unsigned int row = 3; row < Rows; ++row)
             {
-                for (int col = 0; col < Cols; ++col)
+                for (unsigned  int col = 0; col < Cols; ++col)
                 {
                     if (aliens[row][col].isAlive())
                     {
@@ -305,9 +307,9 @@ class AlienManager final : public sf::Drawable
 
         [[nodiscard]] std::optional<std::reference_wrapper<const Alien> > findMostLeftAlien() const
         {
-            for (int col = 0; col < Cols; ++col)
+            for (unsigned int col = 0; col < Cols; ++col)
             {
-                for (int row = 0; row < Rows; ++row)
+                for (unsigned int row = 0; row < Rows; ++row)
                 {
                     if (aliens[row][col].isAlive())
                     {
@@ -323,7 +325,7 @@ class AlienManager final : public sf::Drawable
         {
             for (int col = Cols - 1; col >= 0; --col)
             {
-                for (int row = 0; row < Rows; ++row)
+                for (unsigned int row = 0; row < Rows; ++row)
                 {
                     if (aliens[row][col].isAlive())
                     {
@@ -335,9 +337,10 @@ class AlienManager final : public sf::Drawable
             return std::nullopt;
         }
 
-        [[nodiscard]] std::optional<std::reference_wrapper<const Alien> > findHighestInColumn(const int col) const
+        [[nodiscard]] std::optional<std::reference_wrapper<const Alien> > findHighestInColumn(
+            const unsigned int col) const
         {
-            for (int row = 0; row < Rows; ++row)
+            for (unsigned int row = 0; row < Rows; ++row)
             {
                 if (aliens[row][col].isAlive())
                 {
@@ -362,7 +365,7 @@ class AlienManager final : public sf::Drawable
             const float gap_y = max_tex_size.y * alien_scale * 1.5f;
 
             // 1 row of As, 2 rows of Bs, 2 rows of Cs
-            for (int col = 0; col < Cols; ++col)
+            for (unsigned int col = 0; col < Cols; ++col)
             {
                 aliens.at(0).emplace_back(createAlien(Alien::Type::A, {curr_x, curr_y}));
                 curr_x += gap_x;
@@ -372,7 +375,7 @@ class AlienManager final : public sf::Drawable
             for (int row = 1; row < 3; ++row)
             {
                 curr_x = min_pos.x;
-                for (int col = 0; col < Cols; ++col)
+                for (unsigned int col = 0; col < Cols; ++col)
                 {
                     aliens.at(row).emplace_back(createAlien(Alien::Type::B, {curr_x, curr_y}));
                     curr_x += gap_x;
@@ -380,10 +383,10 @@ class AlienManager final : public sf::Drawable
                 curr_y += gap_y;
             }
 
-            for (int row = 3; row < Rows; ++row)
+            for (unsigned int row = 3; row < Rows; ++row)
             {
                 curr_x = min_pos.x;
-                for (int col = 0; col < Cols; ++col)
+                for (unsigned int col = 0; col < Cols; ++col)
                 {
                     aliens.at(row).emplace_back(createAlien(Alien::Type::C, {curr_x, curr_y}));
                     curr_x += gap_x;

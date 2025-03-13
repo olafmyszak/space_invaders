@@ -81,9 +81,7 @@ class Alien final : public sf::Drawable
 
         void shoot(BulletManager &bullet_manager) const
         {
-            if (bullet_manager.addBullet(sprite.getPosition(), Bullet::Type::Enemy))
-            {
-            }
+            bullet_manager.addBullet(sprite.getPosition(), Bullet::Type::Enemy);
         }
 
         [[nodiscard]] sf::Vector2f getPosition() const
