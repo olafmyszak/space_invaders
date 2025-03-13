@@ -22,6 +22,7 @@ add_executable(space_invaders src/main.cpp
         src/AlienManager.h
         src/Utils.h
         src/Menu.h
+        src/Barrier.h
 )
 
 # Define common compile options

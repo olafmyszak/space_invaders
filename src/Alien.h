@@ -14,7 +14,7 @@ class Alien final : public sf::Drawable
     float step_down;
 
     public:
-        enum class Type
+        enum class Type : int
         {
             A = 40,
             B = 20,
@@ -51,10 +51,7 @@ class Alien final : public sf::Drawable
             });
 
             sprite.setScale({scale, scale});
-
             sprite.setPosition(pos);
-
-
         }
 
         void draw(sf::RenderTarget &target, const sf::RenderStates states) const override
@@ -66,13 +63,13 @@ class Alien final : public sf::Drawable
         {
             switch (direction)
             {
-                case Alien::Direction::Left:
+                case Direction::Left:
                     move_left(delta_time);
                     break;
-                case Alien::Direction::Right:
+                case Direction::Right:
                     move_right(delta_time);
                     break;
-                case Alien::Direction::Down:
+                case Direction::Down:
                     move_down(delta_time);
                     break;
 

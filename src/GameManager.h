@@ -6,6 +6,7 @@
 #include <string>
 
 #include "AlienManager.h"
+#include "Barrier.h"
 #include "Menu.h"
 #include "Spaceship.h"
 
@@ -51,12 +52,17 @@ class GameManager
         {"../../assets/images/alien2a.png", "../../assets/images/alien2b.png"},
         {"../../assets/images/alien1a.png", "../../assets/images/alien1b.png"}
     };
-
     const sf::Texture explosion_texture{"../../assets/images/alienExplosion.png"};
     AlienManager alien_manager{
         alien_textures, explosion_texture, {0.05f * window_x, 0.1f * window_y}, {0.95f * window_x, 0.7f * window_y},
         alien_speed, alien_move_interval, alien_step_down, alien_scale
     };
+
+    static constexpr float barrier_scale = 8.0f;
+    Barrier barrier1{"../../assets/images/barrier.png", barrier_scale, {0.15f * window_x, 0.65f * window_y}};
+    Barrier barrier2{"../../assets/images/barrier.png", barrier_scale, {0.35f * window_x, 0.65f * window_y}};
+    Barrier barrier3{"../../assets/images/barrier.png", barrier_scale, {0.55f * window_x, 0.65f * window_y}};
+    Barrier barrier4{"../../assets/images/barrier.png", barrier_scale, {0.75f * window_x, 0.65f * window_y}};
 
     int score = 0;
     int high_score = -1;
@@ -136,12 +142,12 @@ class GameManager
                     nextLevel();
                 }
 
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::Left))
+                if (isKeyPressed(sf::Keyboard::Scan::Left))
                 {
                     spaceship.move_left(delta_time);
                 }
 
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scan::Right))
+                if (isKeyPressed(sf::Keyboard::Scan::Right))
                 {
                     spaceship.move_right(delta_time);
                 }
@@ -158,6 +164,10 @@ class GameManager
                 window.draw(spaceship);
                 window.draw(bullet_manager);
                 window.draw(alien_manager);
+                window.draw(barrier1);
+                window.draw(barrier2);
+                window.draw(barrier3);
+                window.draw(barrier4);
 
                 // Draw text
                 player_lives_text.setString("Lives: " + std::to_string(spaceship.getLives()));
@@ -210,6 +220,22 @@ class GameManager
                     bullet_manager.erasePlayerBullet();
                     score += value;
                 }
+                else if (barrier1.handleCollision(player_bullet.value()))
+                {
+                    bullet_manager.erasePlayerBullet();
+                }
+                else if (barrier2.handleCollision(player_bullet.value()))
+                {
+                    bullet_manager.erasePlayerBullet();
+                }
+                else if (barrier3.handleCollision(player_bullet.value()))
+                {
+                    bullet_manager.erasePlayerBullet();
+                }
+                else if (barrier4.handleCollision(player_bullet.value()))
+                {
+                    bullet_manager.erasePlayerBullet();
+                }
             }
 
             for (size_t i = 0, e = bullet_manager.alien_bullets.size(); i < e; ++i)
@@ -219,6 +245,22 @@ class GameManager
                     bullet_manager.eraseAlienBullet(i);
 
                     was_player_hit = true;
+                }
+                else if (barrier1.handleCollision(bullet_manager.alien_bullets[i]))
+                {
+                    bullet_manager.eraseAlienBullet(i);
+                }
+                else if (barrier2.handleCollision(bullet_manager.alien_bullets[i]))
+                {
+                    bullet_manager.eraseAlienBullet(i);
+                }
+                else if (barrier3.handleCollision(bullet_manager.alien_bullets[i]))
+                {
+                    bullet_manager.eraseAlienBullet(i);
+                }
+                else if (barrier4.handleCollision(bullet_manager.alien_bullets[i]))
+                {
+                    bullet_manager.eraseAlienBullet(i);
                 }
             }
 

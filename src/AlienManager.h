@@ -11,8 +11,8 @@
 
 class AlienManager final : public sf::Drawable
 {
-    static constexpr int Rows = 5;
-    static constexpr int Cols = 10;
+    static constexpr unsigned int Rows = 5;
+    static constexpr unsigned int Cols = 10;
 
     std::vector<std::vector<Alien> > aliens{Rows};
     std::vector<Alien *> exploding_aliens{};
@@ -43,15 +43,13 @@ class AlienManager final : public sf::Drawable
         sf::SoundBuffer("../../assets/sounds/invader_move1.wav"),
         sf::SoundBuffer("../../assets/sounds/invader_move2.wav"),
         sf::SoundBuffer("../../assets/sounds/invader_move3.wav"),
-        sf::SoundBuffer("../../assets/sounds/invader_move4.wav"),
+        sf::SoundBuffer("../../assets/sounds/invader_move4.wav")
     };
+
     unsigned int current_sound_index = 0;
-    // sf::Sound alien_move_sound{alien_move_sound_buffers.at(current_sound_index)};
     std::array<sf::Sound, 4> alien_move_sounds = {
-        sf::Sound(alien_move_sound_buffers.at(0)),
-        sf::Sound(alien_move_sound_buffers.at(1)),
-        sf::Sound(alien_move_sound_buffers.at(2)),
-        sf::Sound(alien_move_sound_buffers.at(3)),
+        sf::Sound(alien_move_sound_buffers.at(0)), sf::Sound(alien_move_sound_buffers.at(1)),
+        sf::Sound(alien_move_sound_buffers.at(2)), sf::Sound(alien_move_sound_buffers.at(3))
     };
 
     public:
